@@ -43,6 +43,7 @@ bool IsMarshmallowClicked(Marshmallow m, Vector2 mousePos) {
 int main() {
     // Initialize the game window
     InitWindow(screenWidth, screenHeight, "Marshmallow Roasting Game");
+    InitAudioDevice();
     SetTargetFPS(60);
 
     // Load assets
@@ -133,6 +134,7 @@ int main() {
     UnloadTexture(background);
     UnloadSound(clickSound);
     UnloadSound(burnSound);
+    CloseAudioDevice();
 
     CloseWindow();
 
