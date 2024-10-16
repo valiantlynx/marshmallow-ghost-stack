@@ -2,7 +2,7 @@
 #
 #   raylib makefile for Desktop platforms, Raspberry Pi, Android and HTML5
 #
-#   Copyright (c) 2013-2024 Ramon Santamaria (@raysan5)
+#   Copyright (c) 2024-Infinity Gormery Kombo Wanjiru (@valiantlynx)
 #
 #   This software is provided "as-is", without any express or implied warranty. In no event
 #   will the authors be held liable for any damages arising from the use of this software.
@@ -24,7 +24,7 @@
 .PHONY: all clean
 
 # Define required variables
-PROJECT_NAME       ?= light_my_ritual
+PROJECT_NAME       ?= marshmallow_ghost_stack
 RAYLIB_VERSION     ?= 3.8.0
 RAYLIB_PATH        ?= C:/GitHub/raylib
 
@@ -372,10 +372,10 @@ endif
 
 # Define all source files required
 PROJECT_SOURCE_FILES ?= \
-    light_my_ritual.c \
-    screen_logo.c \
-    screen_title.c \
-    screen_gameplay.cpp
+    marshmallow_ghost_stack.cpp \
+    # screen_logo.cpp \
+    # screen_title.cpp \
+    # screen_gameplay.cpp
 
 # Define all object files from source files
 OBJS = $(patsubst %.c, %.o, $(PROJECT_SOURCE_FILES))

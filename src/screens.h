@@ -2,6 +2,7 @@
 #define SCREENS_H
 
 enum GameScreen { LOGO, TITLE, GAMEPLAY };
+extern Font font;
 extern GameScreen currentScreen;
 
 // Logo Screen
