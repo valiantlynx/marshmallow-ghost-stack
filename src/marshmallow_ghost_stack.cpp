@@ -147,7 +147,8 @@ int main() {
         LoadTextureAndResize("resources/images/marshmallow_brown.png", 64, 64),
         LoadTextureAndResize("resources/images/marshmallow_black.png", 64, 64)
     };
-    Texture2D platformTexture = LoadTextureAndResize("resources/images/wooden_platform.png", 128, 32);
+    // Increased plank width to 256 pixels
+    Texture2D platformTexture = LoadTextureAndResize("resources/images/wooden_platform.png", 256, 32); 
     Texture2D bonfireTexture = LoadTextureAndResize("resources/images/bonfire.png", 128, 128);
     Sound clickSound = LoadSound("resources/audio/click-sound.mp3");
     Sound burnSound = LoadSound("resources/audio/burn-sound.mp3");
@@ -197,7 +198,7 @@ int main() {
                     currentScreen = INSTRUCTIONS;
                 }
                 if (IsKeyPressed(KEY_L)) {
-                    displayLeaderboard = true;
+                    displayLeaderboard = !displayLeaderboard;  // Toggle leaderboard
                 }
                 break;
 
@@ -290,7 +291,7 @@ int main() {
                 DrawText("Press Enter to Continue", screenWidth / 2 - 150, screenHeight / 2 + 40, 20, ORANGE);
                 DrawText("Press 'L' to View Leaderboard", screenWidth / 2 - 150, screenHeight / 2 + 80, 20, ORANGE);
                 if (displayLeaderboard) {
-                    DisplayLeaderboard();
+                    DisplayLeaderboard();  // Show leaderboard if 'L' is pressed
                 }
                 break;
 
@@ -315,7 +316,7 @@ int main() {
                 DrawTexture(bonfireTexture, (screenWidth / 2) - 64, screenHeight - 128, WHITE);
 
                 for (int i = 0; i < 4; i++) {
-                    DrawTexture(platformTexture, 300, 250 + (i % 2) * 150, WHITE);
+                    DrawTexture(platformTexture, 300, 250 + (i % 2) * 150, WHITE);  // Increased platform width
                     DrawTexture(marshmallows[i].texture, marshmallows[i].position.x, marshmallows[i].position.y, WHITE);
                 }
 
@@ -330,7 +331,7 @@ int main() {
                 DrawText(TextFormat("Your Score: %d", score), screenWidth / 2 - 100, screenHeight / 2 + 20, 30, ORANGE);
                 DrawText("Press Enter to return to Title Screen", screenWidth / 2 - 250, screenHeight / 2 + 60, 20, ORANGE);
 
-                DisplayLeaderboard();
+                DisplayLeaderboard();  // Show leaderboard on ending screen
                 break;
         }
 
