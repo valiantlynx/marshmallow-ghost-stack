@@ -1,12 +1,12 @@
 #include "raylib.h"
 #include <sqlite3.h>
-#include <string>
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <string.h>
 
 // Define game screens and modes
-typedef enum GameScreen { LOGO = 0, TITLE, INSTRUCTIONS, MODE_SELECT, GAMEPLAY, ENDING } GameScreen;
+typedef enum GameScreen { LOGO = 0, TITLE, NAME_INPUT, INSTRUCTIONS, MODE_SELECT, GAMEPLAY, ENDING } GameScreen;
 typedef enum GameMode { EASY = 0, NORMAL, HARD, TIMED } GameMode;
 
 // Window dimensions
@@ -35,6 +35,9 @@ struct LeaderboardEntry {
 // SQLite database pointer
 sqlite3 *db;
 std::vector<LeaderboardEntry> leaderboard;
+
+// Fiery text color (bright orange)
+Color fieryColor = {255, 69, 0, 255};
 
 // Function to reset marshmallow state
 void ResetMarshmallow(Marshmallow &m, Texture2D textures[]) {
@@ -101,10 +104,10 @@ void LoadLeaderboard() {
 
 // Display leaderboard
 void DisplayLeaderboard() {
-    DrawText("Leaderboard", screenWidth / 2 - 100, 100, 30, DARKGRAY);
+    DrawText("Leaderboard", screenWidth / 2 - 100, 100, 30, fieryColor);
     for (size_t i = 0; i < leaderboard.size(); i++) {
         DrawText(TextFormat("%d. %s - Score: %d, Time: %.1f sec", i + 1, leaderboard[i].name.c_str(), leaderboard[i].score, leaderboard[i].time),
-                 screenWidth / 2 - 200, 150 + (int)i * 30, 20, DARKGRAY);
+                 screenWidth / 2 - 200, 150 + (int)i * 30, 20, fieryColor);
     }
 }
 
@@ -141,7 +144,7 @@ int main() {
     float roastingSpeed = 1.0f;
     int winScore = 50;
     float timeRemaining = 30.0f;  // For timed mode
-    char playerName[32] = "Player";
+    char playerName[32] = "";
     bool displayLeaderboard = false;
 
     // Marshmallows initialization
@@ -167,29 +170,44 @@ int main() {
 
         switch (currentScreen) {
             case LOGO:
-                // Placeholder for logo screen logic
                 if (IsKeyPressed(KEY_ENTER)) currentScreen = TITLE;
                 break;
 
             case TITLE:
-                // Title screen
                 if (IsKeyPressed(KEY_ENTER)) {
-                    currentScreen = INSTRUCTIONS;
+                    currentScreen = NAME_INPUT;
                 }
                 if (IsKeyPressed(KEY_L)) {
                     displayLeaderboard = true;
                 }
                 break;
 
+            case NAME_INPUT:
+                // Allow user to enter their name
+                if (IsKeyPressed(KEY_BACKSPACE) && strlen(playerName) > 0) {
+                    playerName[strlen(playerName) - 1] = '\0';
+                } else if (IsKeyPressed(KEY_ENTER)) {
+                    currentScreen = INSTRUCTIONS;
+                } else {
+                    int key = GetKeyPressed();
+                    if (key >= 32 && key <= 125 && strlen(playerName) < 31) {
+                        playerName[strlen(playerName)] = (char)key;
+                        playerName[strlen(playerName) + 1] = '\0';
+                    }
+                }
+
+                // Show input prompt
+                DrawText("Enter your name:", screenWidth / 2 - 100, screenHeight / 2 - 50, 20, fieryColor);
+                DrawText(playerName, screenWidth / 2 - 100, screenHeight / 2, 20, fieryColor);
+                break;
+
             case INSTRUCTIONS:
-                // Show instructions and go to mode select screen
                 if (IsKeyPressed(KEY_ENTER)) {
                     currentScreen = MODE_SELECT;
                 }
                 break;
 
             case MODE_SELECT:
-                // Mode selection logic
                 if (IsKeyPressed(KEY_ONE)) {
                     currentMode = EASY;
                     roastingSpeed = 0.8f;
@@ -214,25 +232,23 @@ int main() {
                     winScore = 75;
                     currentScreen = GAMEPLAY;
                 }
-                ResetGame();  // Reset the game each time a mode is selected
+                ResetGame();
                 break;
 
             case GAMEPLAY: {
-                // Get mouse position
                 Vector2 mousePos = GetMousePosition();
 
-                // Update marshmallow roasting
                 for (int i = 0; i < 4; i++) {
                     UpdateMarshmallow(marshmallows[i], deltaTime, marshmallowTextures, roastingSpeed);
 
                     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && IsMarshmallowClicked(marshmallows[i], mousePos)) {
-                        if (marshmallows[i].state == 2) { // Perfectly roasted
+                        if (marshmallows[i].state == 2) {
                             score += 5;
                             PlaySound(clickSound);
-                        } else if (marshmallows[i].state == 1) { // Partially roasted
+                        } else if (marshmallows[i].state == 1) {
                             score += 1;
                             PlaySound(clickSound);
-                        } else if (marshmallows[i].state == 3) { // Burnt
+                        } else if (marshmallows[i].state == 3) {
                             score -= 2;
                             PlaySound(burnSound);
                         }
@@ -240,7 +256,6 @@ int main() {
                     }
                 }
 
-                // For timed mode, decrease the time
                 if (currentMode == TIMED) {
                     timeRemaining -= deltaTime;
                     if (timeRemaining <= 0) {
@@ -248,81 +263,82 @@ int main() {
                     }
                 }
 
-                if (score >= winScore || (currentMode == TIMED && timeRemaining <= 0)) {  // Move to ENDING screen
+                if (score >= winScore || (currentMode == TIMED && timeRemaining <= 0)) {
                     currentScreen = ENDING;
                 }
                 break;
             }
 
             case ENDING:
-                // Handle ENDING screen
                 InsertScore(playerName, score, timeRemaining);
-                LoadLeaderboard(); // Reload leaderboard with the latest scores
+                LoadLeaderboard();  // Reload leaderboard with the latest scores
 
                 if (IsKeyPressed(KEY_ENTER)) {
-                    currentScreen = TITLE;  // Return to TITLE screen
+                    currentScreen = TITLE;
                 }
                 break;
         }
 
-        // Draw game
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
         switch (currentScreen) {
             case LOGO:
-                DrawText("LOGO SCREEN", screenWidth / 2 - 100, screenHeight / 2 - 20, 40, LIGHTGRAY);
+                DrawText("LOGO SCREEN", screenWidth / 2 - 100, screenHeight / 2 - 20, 40, fieryColor);
                 break;
 
             case TITLE:
                 DrawTexture(background, 0, 0, WHITE);
-                DrawText("Marshmallow Roasting Game", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, LIGHTGRAY);
-                DrawText("Press Enter to Continue", screenWidth / 2 - 150, screenHeight / 2 + 40, 20, DARKGRAY);
-                DrawText("Press 'L' to View Leaderboard", screenWidth / 2 - 150, screenHeight / 2 + 80, 20, DARKGRAY);
+                DrawText("Marshmallow Roasting Game", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, fieryColor);
+                DrawText("Press Enter to Continue", screenWidth / 2 - 150, screenHeight / 2 + 40, 20, fieryColor);
+                DrawText("Press 'L' to View Leaderboard", screenWidth / 2 - 150, screenHeight / 2 + 80, 20, fieryColor);
                 if (displayLeaderboard) {
-                    DisplayLeaderboard();  // Display leaderboard on title screen if 'L' is pressed
+                    DisplayLeaderboard();
                 }
                 break;
 
+            case NAME_INPUT:
+                DrawText("Enter your name:", screenWidth / 2 - 100, screenHeight / 2 - 50, 20, fieryColor);
+                DrawText(playerName, screenWidth / 2 - 100, screenHeight / 2, 20, fieryColor);
+                break;
+
             case INSTRUCTIONS:
-                DrawText("How to Play:", screenWidth / 2 - 100, screenHeight / 2 - 80, 30, LIGHTGRAY);
-                DrawText("Click the marshmallows to roast them!", screenWidth / 2 - 200, screenHeight / 2 - 40, 20, DARKGRAY);
-                DrawText("Score points by perfectly roasting (brown) marshmallows.", screenWidth / 2 - 200, screenHeight / 2, 20, DARKGRAY);
-                DrawText("Avoid burning them!", screenWidth / 2 - 100, screenHeight / 2 + 40, 20, DARKGRAY);
-                DrawText("Press Enter to select mode", screenWidth / 2 - 150, screenHeight / 2 + 80, 20, DARKGRAY);
+                DrawText("How to Play:", screenWidth / 2 - 100, screenHeight / 2 - 80, 30, fieryColor);
+                DrawText("Click the marshmallows to roast them!", screenWidth / 2 - 200, screenHeight / 2 - 40, 20, fieryColor);
+                DrawText("Score points by perfectly roasting (brown) marshmallows.", screenWidth / 2 - 200, screenHeight / 2, 20, fieryColor);
+                DrawText("Avoid burning them!", screenWidth / 2 - 100, screenHeight / 2 + 40, 20, fieryColor);
+                DrawText("Press Enter to select mode", screenWidth / 2 - 150, screenHeight / 2 + 80, 20, fieryColor);
                 break;
 
             case MODE_SELECT:
-                DrawText("Select Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 40, LIGHTGRAY);
-                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, DARKGRAY);
-                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, DARKGRAY);
-                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, DARKGRAY);
-                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, DARKGRAY);
+                DrawText("Select Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 40, fieryColor);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, fieryColor);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, fieryColor);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, fieryColor);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, fieryColor);
                 break;
 
             case GAMEPLAY:
                 DrawTexture(background, 0, 0, WHITE);
                 DrawTexture(bonfireTexture, (screenWidth / 2) - 64, screenHeight - 128, WHITE);
 
-                // Draw marshmallows and platforms
                 for (int i = 0; i < 4; i++) {
                     DrawTexture(platformTexture, 300, 250 + (i % 2) * 150, WHITE);
                     DrawTexture(marshmallows[i].texture, marshmallows[i].position.x, marshmallows[i].position.y, WHITE);
                 }
 
-                // Draw score and timer (if applicable)
-                DrawText(TextFormat("Score: %d", score), 10, 10, 20, DARKGRAY);
+                DrawText(TextFormat("Score: %d", score), 10, 10, 20, fieryColor);
                 if (currentMode == TIMED) {
-                    DrawText(TextFormat("Time: %.1f", timeRemaining), screenWidth - 150, 10, 20, DARKGRAY);
+                    DrawText(TextFormat("Time: %.1f", timeRemaining), screenWidth - 150, 10, 20, fieryColor);
                 }
                 break;
 
             case ENDING:
-                DrawText("Congratulations!", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, LIGHTGRAY);
-                DrawText(TextFormat("Your Score: %d", score), screenWidth / 2 - 100, screenHeight / 2 + 20, 30, DARKGRAY);
-                DrawText("Press Enter to return to Title Screen", screenWidth / 2 - 250, screenHeight / 2 + 60, 20, DARKGRAY);
+                DrawText("Congratulations!", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, fieryColor);
+                DrawText(TextFormat("Your Score: %d", score), screenWidth / 2 - 100, screenHeight / 2 + 20, 30, fieryColor);
+                DrawText("Press Enter to return to Title Screen", screenWidth / 2 - 250, screenHeight / 2 + 60, 20, fieryColor);
 
-                DisplayLeaderboard();  // Show leaderboard on ending screen
+                DisplayLeaderboard();
                 break;
         }
 
@@ -341,7 +357,7 @@ int main() {
     UnloadMusicStream(backgroundMusic);
     CloseAudioDevice();
 
-    sqlite3_close(db);  // Close database
+    sqlite3_close(db);
 
     CloseWindow();
 
