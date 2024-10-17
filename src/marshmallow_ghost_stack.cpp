@@ -16,6 +16,9 @@ struct Marshmallow {
     Rectangle bounds;
 };
 
+// Declare marshmallows array globally so it can be used across all functions
+Marshmallow marshmallows[4];
+
 // Function to reset marshmallow state
 void ResetMarshmallow(Marshmallow &m, Texture2D textures[]) {
     m.state = 0;
@@ -73,11 +76,19 @@ int main() {
     float roastingSpeed = 1.0f;
 
     // Marshmallows initialization
-    Marshmallow marshmallows[4] = {
-        {{150, 200}, 0, 0.0f, marshmallowTextures[0], {150, 200, 64, 64}},
-        {{600, 200}, 0, 0.0f, marshmallowTextures[0], {600, 200, 64, 64}},
-        {{150, 350}, 0, 0.0f, marshmallowTextures[0], {150, 350, 64, 64}},
-        {{600, 350}, 0, 0.0f, marshmallowTextures[0], {600, 350, 64, 64}},
+    marshmallows[0] = {{150, 200}, 0, 0.0f, marshmallowTextures[0], {150, 200, 64, 64}};
+    marshmallows[1] = {{600, 200}, 0, 0.0f, marshmallowTextures[0], {600, 200, 64, 64}};
+    marshmallows[2] = {{150, 350}, 0, 0.0f, marshmallowTextures[0], {150, 350, 64, 64}};
+    marshmallows[3] = {{600, 350}, 0, 0.0f, marshmallowTextures[0], {600, 350, 64, 64}};
+
+    // Function to reset the game state
+    auto ResetGame = [&]() {
+        score = 0; // Reset the score
+
+        // Reset all marshmallows
+        for (int i = 0; i < 4; i++) {
+            ResetMarshmallow(marshmallows[i], marshmallowTextures);
+        }
     };
 
     while (!WindowShouldClose()) {
@@ -93,11 +104,14 @@ int main() {
 
             case TITLE:
                 // Placeholder for title screen logic
-                if (IsKeyPressed(KEY_ENTER)) currentScreen = GAMEPLAY;
+                if (IsKeyPressed(KEY_ENTER)) {
+                    ResetGame(); // Reset game state when starting
+                    currentScreen = GAMEPLAY;
+                }
                 break;
 
             case GAMEPLAY: {
-                // Get mouse position (move this declaration inside the GAMEPLAY case)
+                // Get mouse position
                 Vector2 mousePos = GetMousePosition();
 
                 // Update marshmallow roasting
@@ -127,7 +141,9 @@ int main() {
 
             case ENDING:
                 // Handle ENDING screen
-                if (IsKeyPressed(KEY_ENTER)) currentScreen = TITLE;
+                if (IsKeyPressed(KEY_ENTER)) {
+                    currentScreen = TITLE;  // Return to TITLE screen
+                }
                 break;
         }
 
