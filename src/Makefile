@@ -317,6 +317,7 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
         LDLIBS = -lraylib -lopengl32 -lgdi32 -lwinmm
         # Required for physac examples
         LDLIBS += -static -lpthread
+        
     endif
     ifeq ($(PLATFORM_OS),LINUX)
         # Libraries for Debian GNU/Linux desktop compiling
@@ -327,6 +328,11 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
         LDLIBS += -lX11
         # NOTE: It seems additional libraries are not required any more, latest GLFW just dlopen them
         #LDLIBS += -lXrandr -lXinerama -lXi -lXxf86vm -lXcursor
+
+        #add sqlite
+        LDLIBS += -lsqlite3
+        INCLUDE_PATHS += -I/usr/local/include  # Adjust if needed
+        LDFLAGS += -L/usr/local/lib  # Adjust if needed
 
         # On Wayland windowing system, additional libraries requires
         ifeq ($(USE_WAYLAND_DISPLAY),TRUE)

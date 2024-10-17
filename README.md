@@ -13,3 +13,6 @@ sudo cp include/rlgl.h /usr/local/include/
 sudo cp libraylib.a /usr/local/lib/
 sudo cp libraylib.so /usr/local/lib/
 
+sudo apt-get install libsqlite3-dev make
+
+
