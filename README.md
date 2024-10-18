@@ -1,3 +1,6 @@
+# ghost stack inspired "how to roast a marchmallow game.
+for the beta uia Gamejam
+
 g++ -o marshmallow_game main.cpp -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
 ./marshmallow_game
@@ -14,5 +17,3 @@ sudo cp libraylib.a /usr/local/lib/
 sudo cp libraylib.so /usr/local/lib/
 
 sudo apt-get install libsqlite3-dev make
-
-
