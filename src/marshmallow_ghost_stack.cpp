@@ -155,10 +155,46 @@ Texture2D LoadTextureAndResize(const char* fileName, int width, int height) {
     return texture;
 }
 
+// Background scrolling variables for parallax effect
+struct ParallaxLayer {
+    Texture2D texture;
+    float scrollingOffset;
+    float speed;
+};
+
+ParallaxLayer parallaxLayers[5];
+
+// Function to update a specific parallax layer if it has a non-zero speed
+void UpdateParallaxLayer(ParallaxLayer &layer, float deltaTime) {
+    if (layer.speed != 0.0f) {
+        layer.scrollingOffset -= layer.speed * deltaTime;
+        if (layer.scrollingOffset <= -layer.texture.width) {
+            layer.scrollingOffset = 0;
+        }
+    }
+}
+
+// Function to initialize parallax layers
+void InitializeParallaxLayers() {
+    parallaxLayers[0] = { LoadTextureAndResize("resources/textures/parallax/background 2/Plan-5.png", screenWidth, screenHeight), 0.0f, 50.0f }; // Static background
+    parallaxLayers[1] = { LoadTextureAndResize("resources/textures/parallax/background 2/Plan-4.png", screenWidth, screenHeight), 0.0f, 1.0f }; // Slow moving clouds
+    parallaxLayers[2] = { LoadTextureAndResize("resources/textures/parallax/background 2/Plan-3.png", screenWidth, screenHeight), 0.0f, 0.0f }; // Static mountains
+    parallaxLayers[3] = { LoadTextureAndResize("resources/textures/parallax/background 2/Plan-2.png", screenWidth, screenHeight), 0.0f, 0.0f }; // Moving trees
+    parallaxLayers[4] = { LoadTextureAndResize("resources/textures/parallax/background 2/Plan-1.png", screenWidth, screenHeight), 0.0f, 25.0f }; // Fast moving foreground
+}
+
+// Function to draw the parallax layers
+void DrawParallaxLayers() {
+    for (int i = 0; i < 5; i++) {
+        DrawTextureEx(parallaxLayers[i].texture, (Vector2){ parallaxLayers[i].scrollingOffset, 0 }, 0.0f, 1.0f, WHITE);
+        DrawTextureEx(parallaxLayers[i].texture, (Vector2){ parallaxLayers[i].scrollingOffset + parallaxLayers[i].texture.width, 0 }, 0.0f, 1.0f, WHITE);
+    }
+}
+
 // Main game entry
 int main() {
     // Initialization
-    InitWindow(screenWidth, screenHeight, "Marshmallow Roasting Game");
+    InitWindow(screenWidth, screenHeight, "Marshmallow Roasting Game with Parallax Background");
     InitAudioDevice();
     SetTargetFPS(60);
     InitDatabase();
@@ -174,11 +210,15 @@ int main() {
     };
     Texture2D platformTexture = LoadTextureAndResize("resources/images/wooden_platform.png", 600, 32); 
     Texture2D bonfireTexture = LoadTextureAndResize("resources/images/bonfire.png", 128, 128);
+    
+    // Load sound/music once and unload at the end
     Sound clickSound = LoadSound("resources/audio/click-sound.mp3");
     Sound burnSound = LoadSound("resources/audio/burn-sound.mp3");
-
     Music backgroundMusic = LoadMusicStream("resources/audio/ritual.ogg");
     PlayMusicStream(backgroundMusic);
+
+    // Initialize parallax layers
+    InitializeParallaxLayers();
 
     // Initialize game state variables
     GameScreen currentScreen = TITLE;
@@ -187,31 +227,32 @@ int main() {
     float deltaTime = 0.0f;
     float roastingSpeed = 1.0f;
     int winScore = 50;
-    float timeRemaining = 30.0f;  // For timed mode
+    float timeRemaining = 30.0f;
     char playerName[32] = "";
     bool displayLeaderboard = false;
     int letterCount = 0;
 
-    // Marshmallows initialization
     marshmallows[0] = {{150, 200}, 0, 0.0f, marshmallowTextures[0], {150, 200, 64, 64}};
     marshmallows[1] = {{600, 200}, 0, 0.0f, marshmallowTextures[0], {600, 200, 64, 64}};
     marshmallows[2] = {{150, 350}, 0, 0.0f, marshmallowTextures[0], {150, 350, 64, 64}};
     marshmallows[3] = {{600, 350}, 0, 0.0f, marshmallowTextures[0], {600, 350, 64, 64}};
 
-    // Function to reset the game state
     auto ResetGame = [&]() {
         score = 0;
-        timeRemaining = 30.0f;  // Reset time for timed mode
-        // Reset all marshmallows
+        timeRemaining = 30.0f;  
         for (int i = 0; i < 4; i++) {
             ResetMarshmallow(marshmallows[i], marshmallowTextures);
         }
     };
 
     while (!WindowShouldClose()) {
-        // Update game state
         deltaTime = GetFrameTime();
-        UpdateMusicStream(backgroundMusic);
+        UpdateMusicStream(backgroundMusic); // Update the music stream properly
+
+        // Update parallax backgrounds
+        for (int i = 0; i < 5; i++) {
+            UpdateParallaxLayer(parallaxLayers[i], deltaTime);
+        }
 
         switch (currentScreen) {
             case LOGO:
@@ -363,6 +404,9 @@ int main() {
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
+         // Draw the parallax background layers
+        DrawParallaxLayers();
+
         switch (currentScreen) {
             case LOGO:
                 DrawText("LOGO SCREEN", screenWidth / 2 - 100, screenHeight / 2 - 20, 40, ORANGE);
@@ -430,23 +474,27 @@ int main() {
                 break;
         }
 
-        EndDrawing();
+            EndDrawing();
     }
 
+    // Free resources
     for (int i = 0; i < 4; i++) {
         UnloadTexture(marshmallowTextures[i]);
     }
     UnloadTexture(platformTexture);
     UnloadTexture(bonfireTexture);
-    UnloadTexture(background);
+
+    // Unload parallax layers
+    for (int i = 0; i < 5; i++) {
+        UnloadTexture(parallaxLayers[i].texture);
+    }
+
+    // Unload sounds and music
     UnloadSound(clickSound);
     UnloadSound(burnSound);
     UnloadMusicStream(backgroundMusic);
-    CloseAudioDevice();
 
     sqlite3_close(db);  // Close database
-
     CloseWindow();
-
     return 0;
 }
