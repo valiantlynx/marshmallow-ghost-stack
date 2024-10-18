@@ -2,11 +2,10 @@
 #include <sqlite3.h>
 #include <string>
 #include <vector>
-#include <algorithm>
 #include <sstream>
 
 // Define game screens and modes
-typedef enum GameScreen { LOGO = 0, TITLE, INSTRUCTIONS, MODE_SELECT, NAME_INPUT, GAMEPLAY, ENDING } GameScreen;
+typedef enum GameScreen { LOGO = 0, TITLE, INSTRUCTIONS, MODE_SELECT, NAME_INPUT, GAMEPLAY, ENDING, LEADERBOARD_SELECTION } GameScreen;
 typedef enum GameMode { EASY = 0, NORMAL, HARD, TIMED } GameMode;
 
 // Window dimensions
@@ -36,6 +35,7 @@ struct LeaderboardEntry {
 // SQLite database pointer
 sqlite3 *db;
 std::vector<LeaderboardEntry> leaderboard;
+GameMode currentLeaderboardMode = EASY; // Track the current mode displayed on the leaderboard
 
 // Function to reset marshmallow state
 void ResetMarshmallow(Marshmallow &m, Texture2D textures[]) {
@@ -75,21 +75,18 @@ const char* GetGameModeString(GameMode mode) {
     }
 }
 
-// Initialize database
+// Initialize the database
 void InitDatabase() {
     if (sqlite3_open("leaderboard.db", &db)) {
         TraceLog(LOG_ERROR, "Can't open database: %s", sqlite3_errmsg(db));
     } else {
-        // Create table if not exists
         const char *sql = "CREATE TABLE IF NOT EXISTS leaderboard (id INTEGER PRIMARY KEY, name TEXT, score INT, time FLOAT, mode TEXT);";
         sqlite3_exec(db, sql, nullptr, nullptr, nullptr);
     }
 }
 
-// Insert score into the database
-// Insert or update score into the database
+// Insert or update scores in the database
 void InsertScore(const char *name, int score, float time, const char *mode) {
-    // Check if the player already has a score in this mode
     std::stringstream checkQuery;
     checkQuery << "SELECT score FROM leaderboard WHERE name = '" << name << "' AND mode = '" << mode << "';";
     
@@ -98,19 +95,17 @@ void InsertScore(const char *name, int score, float time, const char *mode) {
 
     if (sqlite3_prepare_v2(db, checkQuery.str().c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
         if (sqlite3_step(stmt) == SQLITE_ROW) {
-            existingScore = sqlite3_column_int(stmt, 0); // Get the existing score
+            existingScore = sqlite3_column_int(stmt, 0);
         }
     }
     sqlite3_finalize(stmt);
 
     if (existingScore == -1) {
-        // No existing entry, insert a new one
         std::stringstream insertQuery;
         insertQuery << "INSERT INTO leaderboard (name, score, time, mode) VALUES ('" 
                     << name << "', " << score << ", " << time << ", '" << mode << "');";
         sqlite3_exec(db, insertQuery.str().c_str(), nullptr, nullptr, nullptr);
     } else if (score > existingScore) {
-        // Update the existing score only if the new score is higher
         std::stringstream updateQuery;
         updateQuery << "UPDATE leaderboard SET score = " << score << ", time = " << time
                     << " WHERE name = '" << name << "' AND mode = '" << mode << "';";
@@ -118,8 +113,7 @@ void InsertScore(const char *name, int score, float time, const char *mode) {
     }
 }
 
-
-// Load leaderboard from the database filtered by game mode
+// Load leaderboard from the database based on mode
 void LoadLeaderboard(const char *mode) {
     leaderboard.clear();
     std::stringstream ss;
@@ -141,12 +135,13 @@ void LoadLeaderboard(const char *mode) {
 // Display leaderboard
 void DisplayLeaderboard() {
     if (leaderboard.empty()) {
-        DrawText("No leaderboard data yet.", screenWidth / 2 - 150, 200, 30, ORANGE);  // Message if no data
+        DrawText("No leaderboard data yet.", screenWidth / 2 - 150, 200, 30, ORANGE);
     } else {
-        DrawText("Leaderboard", screenWidth / 2 - 100, 100, 30, ORANGE);  // Brighter text color
+        DrawText("Leaderboard", screenWidth / 2 - 100, 100, 30, ORANGE);
+        DrawText(TextFormat("Current Mode: %s", GetGameModeString(currentLeaderboardMode)), screenWidth / 2 - 150, 140, 20, ORANGE);
         for (size_t i = 0; i < leaderboard.size(); i++) {
             DrawText(TextFormat("%d. %s - Score: %d, Time: %.1f sec", i + 1, leaderboard[i].name.c_str(), leaderboard[i].score, leaderboard[i].time),
-                     screenWidth / 2 - 200, 150 + (int)i * 30, 20, ORANGE);  // Brighter text color
+                     screenWidth / 2 - 200, 150 + (int)i * 30, 20, ORANGE);
         }
     }
 }
@@ -220,48 +215,55 @@ int main() {
 
         switch (currentScreen) {
             case LOGO:
-                    if (IsKeyPressed(KEY_ENTER)) currentScreen = TITLE;
-                    break;
+                if (IsKeyPressed(KEY_ENTER)) currentScreen = TITLE;
+                break;
 
             case TITLE:
                 if (IsKeyPressed(KEY_ENTER)) {
                     currentScreen = NAME_INPUT;
                 }
                 if (IsKeyPressed(KEY_L)) {
-                    displayLeaderboard = !displayLeaderboard;  // Toggle leaderboard
+                    currentScreen = LEADERBOARD_SELECTION;  // Go to leaderboard mode selection screen
                 }
                 break;
 
-            case INSTRUCTIONS:  // Handle INSTRUCTIONS case
-                DrawText("Instructions: Roast marshmallows to score points.", screenWidth / 2 - 200, screenHeight / 2 - 50, 20, ORANGE);
-                DrawText("Press Enter to return to the Title screen.", screenWidth / 2 - 200, screenHeight / 2, 20, ORANGE);
-                if (IsKeyPressed(KEY_ENTER)) {
+            case LEADERBOARD_SELECTION:
+                DrawText("Select Leaderboard Mode", screenWidth / 2 - 150, screenHeight / 2 - 100, 30, ORANGE);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, ORANGE);
+
+                if (IsKeyPressed(KEY_ONE)) {
+                    currentLeaderboardMode = EASY;
+                    LoadLeaderboard(GetGameModeString(currentLeaderboardMode));
+                    displayLeaderboard = true;  // Set the leaderboard to display
+                    currentScreen = TITLE;  // Return to title after selecting
+                } else if (IsKeyPressed(KEY_TWO)) {
+                    currentLeaderboardMode = NORMAL;
+                    LoadLeaderboard(GetGameModeString(currentLeaderboardMode));
+                    displayLeaderboard = true;  // Set the leaderboard to display
+                    currentScreen = TITLE;
+                } else if (IsKeyPressed(KEY_THREE)) {
+                    currentLeaderboardMode = HARD;
+                    LoadLeaderboard(GetGameModeString(currentLeaderboardMode));
+                    displayLeaderboard = true;  // Set the leaderboard to display
+                    currentScreen = TITLE;
+                } else if (IsKeyPressed(KEY_FOUR)) {
+                    currentLeaderboardMode = TIMED;
+                    LoadLeaderboard(GetGameModeString(currentLeaderboardMode));
+                    displayLeaderboard = true;  // Set the leaderboard to display
                     currentScreen = TITLE;
                 }
                 break;
 
-            case NAME_INPUT: {
-                // Player name input
-                if (IsKeyPressed(KEY_BACKSPACE) && letterCount > 0) {
-                    playerName[--letterCount] = '\0';
-                }
-
-                int key = GetKeyPressed();  // Declare key here inside braces
-                if (key >= 32 && key <= 125 && letterCount < 31) {
-                    playerName[letterCount++] = (char)key;
-                    playerName[letterCount] = '\0';
-                }
-
-                if (IsKeyPressed(KEY_ENTER) && letterCount > 0) {
-                    currentScreen = MODE_SELECT;
-                }
-
-                DrawText("Enter your name:", screenWidth / 2 - 150, screenHeight / 2 - 50, 20, DARKGRAY);
-                DrawText(playerName, screenWidth / 2 - 150, screenHeight / 2, 30, ORANGE);
-                break;  // End of this case block
-            }
-
             case MODE_SELECT:
+                DrawText("Select Game Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 30, ORANGE);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, ORANGE);
+                
                 if (IsKeyPressed(KEY_ONE)) {
                     currentMode = EASY;
                     roastingSpeed = 0.8f;
@@ -283,8 +285,36 @@ int main() {
                     winScore = 75;
                     currentScreen = GAMEPLAY;
                 }
-                ResetGame();
+                ResetGame();  // Reset game state
                 break;
+
+            case INSTRUCTIONS:
+                DrawText("Instructions: Roast marshmallows to score points.", screenWidth / 2 - 200, screenHeight / 2 - 50, 20, ORANGE);
+                DrawText("Press Enter to return to the Title screen.", screenWidth / 2 - 200, screenHeight / 2, 20, ORANGE);
+                if (IsKeyPressed(KEY_ENTER)) {
+                    currentScreen = TITLE;
+                }
+                break;
+
+            case NAME_INPUT: {
+                if (IsKeyPressed(KEY_BACKSPACE) && letterCount > 0) {
+                    playerName[--letterCount] = '\0';
+                }
+
+                int key = GetKeyPressed();
+                if (key >= 32 && key <= 125 && letterCount < 31) {
+                    playerName[letterCount++] = (char)key;
+                    playerName[letterCount] = '\0';
+                }
+
+                if (IsKeyPressed(KEY_ENTER) && letterCount > 0) {
+                    currentScreen = MODE_SELECT;
+                }
+
+                DrawText("Enter your name:", screenWidth / 2 - 150, screenHeight / 2 - 50, 20, DARKGRAY);
+                DrawText(playerName, screenWidth / 2 - 150, screenHeight / 2, 30, ORANGE);
+                break;
+            }
 
             case GAMEPLAY: {
                 Vector2 mousePos = GetMousePosition();
@@ -317,7 +347,7 @@ int main() {
                 if (score >= winScore || (currentMode == TIMED && timeRemaining <= 0)) {
                     currentScreen = ENDING;
                 }
-                break;  // End of this case block
+                break;
             }
 
             case ENDING:
@@ -344,40 +374,32 @@ int main() {
                 DrawText("Press Enter to Continue", screenWidth / 2 - 150, screenHeight / 2 + 40, 20, ORANGE);
                 DrawText("Press 'L' to View Leaderboard", screenWidth / 2 - 150, screenHeight / 2 + 80, 20, ORANGE);
                 if (displayLeaderboard) {
-                    DisplayLeaderboard();  // Show leaderboard if 'L' is pressed
+                    DisplayLeaderboard();
                 }
                 break;
 
-            case INSTRUCTIONS:  // Add this case to handle the instructions screen rendering
+            case INSTRUCTIONS:
                 DrawText("Instructions: Roast marshmallows to score points.", screenWidth / 2 - 200, screenHeight / 2 - 50, 20, ORANGE);
                 DrawText("Press Enter to return to the Title screen.", screenWidth / 2 - 200, screenHeight / 2, 20, ORANGE);
                 break;
-
+            
 
             case NAME_INPUT: {
-                // Player name input
-                if (IsKeyPressed(KEY_BACKSPACE) && letterCount > 0) {
-                    playerName[--letterCount] = '\0';
-                }
-
-                int key = GetKeyPressed();  // Declare key here inside braces
-                if (key >= 32 && key <= 125 && letterCount < 31) {
-                    playerName[letterCount++] = (char)key;
-                    playerName[letterCount] = '\0';
-                }
-
-                if (IsKeyPressed(KEY_ENTER) && letterCount > 0) {
-                    currentScreen = MODE_SELECT;
-                }
-
                 DrawText("Enter your name:", screenWidth / 2 - 150, screenHeight / 2 - 50, 20, DARKGRAY);
                 DrawText(playerName, screenWidth / 2 - 150, screenHeight / 2, 30, ORANGE);
-                break;  // End of this case block
+                break;
             }
 
+            case LEADERBOARD_SELECTION:
+                DrawText("Select Leaderboard Mode", screenWidth / 2 - 150, screenHeight / 2 - 100, 30, ORANGE);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, ORANGE);
+                break;
 
             case MODE_SELECT:
-                DrawText("Select Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 40, ORANGE);
+                DrawText("Select Game Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 30, ORANGE);
                 DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
                 DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
                 DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
@@ -389,7 +411,7 @@ int main() {
                 DrawTexture(bonfireTexture, (screenWidth / 2) - 64, screenHeight - 128, WHITE);
 
                 for (int i = 0; i < 4; i++) {
-                    DrawTexture(platformTexture, 300, 250 + (i % 2) * 150, WHITE);  // Increased platform width
+                    DrawTexture(platformTexture, 300, 250 + (i % 2) * 150, WHITE);
                     DrawTexture(marshmallows[i].texture, marshmallows[i].position.x, marshmallows[i].position.y, WHITE);
                 }
 
