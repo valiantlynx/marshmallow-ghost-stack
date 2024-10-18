@@ -172,7 +172,7 @@ int main() {
         LoadTextureAndResize("resources/images/marshmallow_brown.png", 64, 64),
         LoadTextureAndResize("resources/images/marshmallow_black.png", 64, 64)
     };
-    Texture2D platformTexture = LoadTextureAndResize("resources/images/wooden_platform.png", 333, 32); 
+    Texture2D platformTexture = LoadTextureAndResize("resources/images/wooden_platform.png", 600, 32); 
     Texture2D bonfireTexture = LoadTextureAndResize("resources/images/bonfire.png", 128, 128);
     Sound clickSound = LoadSound("resources/audio/click-sound.mp3");
     Sound burnSound = LoadSound("resources/audio/burn-sound.mp3");
@@ -411,7 +411,7 @@ int main() {
                 DrawTexture(bonfireTexture, (screenWidth / 2) - 64, screenHeight - 128, WHITE);
 
                 for (int i = 0; i < 4; i++) {
-                    DrawTexture(platformTexture, 300, 250 + (i % 2) * 150, WHITE);
+                    DrawTexture(platformTexture, 120, 250 + (i % 2) * 150, WHITE);
                     DrawTexture(marshmallows[i].texture, marshmallows[i].position.x, marshmallows[i].position.y, WHITE);
                 }
 
