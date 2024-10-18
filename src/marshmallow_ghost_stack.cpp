@@ -135,13 +135,13 @@ void LoadLeaderboard(const char *mode) {
 // Display leaderboard
 void DisplayLeaderboard() {
     if (leaderboard.empty()) {
-        DrawText("No leaderboard data yet.", screenWidth / 2 - 150, 200, 30, ORANGE);
+        DrawText("No leaderboard data yet.", screenWidth / 2 - 150, 200, 30, WHITE);
     } else {
-        DrawText("Leaderboard", screenWidth / 2 - 100, 100, 30, ORANGE);
-        DrawText(TextFormat("Current Mode: %s", GetGameModeString(currentLeaderboardMode)), screenWidth / 2 - 150, 140, 20, ORANGE);
+        DrawText("Leaderboard", screenWidth / 2 - 100, 100, 30, WHITE);
+        DrawText(TextFormat("Current Mode: %s", GetGameModeString(currentLeaderboardMode)), screenWidth / 2 - 150, 140, 20, WHITE);
         for (size_t i = 0; i < leaderboard.size(); i++) {
             DrawText(TextFormat("%d. %s - Score: %d, Time: %.1f sec", i + 1, leaderboard[i].name.c_str(), leaderboard[i].score, leaderboard[i].time),
-                     screenWidth / 2 - 200, 180 + (int)i * 30, 20, ORANGE);
+                     screenWidth / 2 - 200, 180 + (int)i * 30, 20, WHITE);
         }
     }
 }
@@ -269,11 +269,11 @@ int main() {
                 break;
 
             case LEADERBOARD_SELECTION:
-                DrawText("Select Leaderboard Mode", screenWidth / 2 - 150, screenHeight / 2 - 100, 30, ORANGE);
-                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
-                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
-                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
-                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, ORANGE);
+                DrawText("Select Leaderboard Mode", screenWidth / 2 - 150, screenHeight / 2 - 100, 30, WHITE);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, WHITE);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, WHITE);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, WHITE);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, WHITE);
 
                 if (IsKeyPressed(KEY_ONE)) {
                     currentLeaderboardMode = EASY;
@@ -299,11 +299,11 @@ int main() {
                 break;
 
             case MODE_SELECT:
-                DrawText("Select Game Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 30, ORANGE);
-                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
-                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
-                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
-                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, ORANGE);
+                DrawText("Select Game Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 30, WHITE);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, WHITE);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, WHITE);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, WHITE);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, WHITE);
                 
                 if (IsKeyPressed(KEY_ONE)) {
                     currentMode = EASY;
@@ -330,8 +330,8 @@ int main() {
                 break;
 
             case INSTRUCTIONS:
-                DrawText("Instructions: Roast marshmallows to score points.", screenWidth / 2 - 200, screenHeight / 2 - 50, 20, ORANGE);
-                DrawText("Press Enter to return to the Title screen.", screenWidth / 2 - 200, screenHeight / 2, 20, ORANGE);
+                DrawText("Instructions: Roast marshmallows to score points.", screenWidth / 2 - 200, screenHeight / 2 - 50, 20, WHITE);
+                DrawText("Press Enter to return to the Title screen.", screenWidth / 2 - 200, screenHeight / 2, 20, WHITE);
                 if (IsKeyPressed(KEY_ENTER)) {
                     currentScreen = TITLE;
                 }
@@ -353,7 +353,7 @@ int main() {
                 }
 
                 DrawText("Enter your name:", screenWidth / 2 - 150, screenHeight / 2 - 50, 20, DARKGRAY);
-                DrawText(playerName, screenWidth / 2 - 150, screenHeight / 2, 30, ORANGE);
+                DrawText(playerName, screenWidth / 2 - 150, screenHeight / 2, 30, WHITE);
                 break;
             }
 
@@ -409,45 +409,45 @@ int main() {
 
         switch (currentScreen) {
             case LOGO:
-                DrawText("LOGO SCREEN", screenWidth / 2 - 100, screenHeight / 2 - 20, 40, ORANGE);
+                DrawText("LOGO SCREEN", screenWidth / 2 - 100, screenHeight / 2 - 20, 40, WHITE);
                 break;
 
             case TITLE:
                 DrawTexture(background, 0, 0, WHITE);
-                DrawText("Marshmallow Roasting Game", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, ORANGE);
-                DrawText("Press Enter to Continue", screenWidth / 2 - 150, screenHeight / 2 + 40, 20, ORANGE);
-                DrawText("Press 'L' to View Leaderboard", screenWidth / 2 - 150, screenHeight / 2 + 80, 20, ORANGE);
+                DrawText("Marshmallow Roasting Game", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, WHITE);
+                DrawText("Press Enter to Continue", screenWidth / 2 - 150, screenHeight / 2 + 40, 20, WHITE);
+                DrawText("Press 'L' to View Leaderboard", screenWidth / 2 - 150, screenHeight / 2 + 80, 20, WHITE);
                 if (displayLeaderboard) {
                     DisplayLeaderboard();
                 }
                 break;
 
             case INSTRUCTIONS:
-                DrawText("Instructions: Roast marshmallows to score points.", screenWidth / 2 - 200, screenHeight / 2 - 50, 20, ORANGE);
-                DrawText("Press Enter to return to the Title screen.", screenWidth / 2 - 200, screenHeight / 2, 20, ORANGE);
+                DrawText("Instructions: Roast marshmallows to score points.", screenWidth / 2 - 200, screenHeight / 2 - 50, 20, WHITE);
+                DrawText("Press Enter to return to the Title screen.", screenWidth / 2 - 200, screenHeight / 2, 20, WHITE);
                 break;
             
 
             case NAME_INPUT: {
                 DrawText("Enter your name:", screenWidth / 2 - 150, screenHeight / 2 - 50, 20, DARKGRAY);
-                DrawText(playerName, screenWidth / 2 - 150, screenHeight / 2, 30, ORANGE);
+                DrawText(playerName, screenWidth / 2 - 150, screenHeight / 2, 30, WHITE);
                 break;
             }
 
             case LEADERBOARD_SELECTION:
-                DrawText("Select Leaderboard Mode", screenWidth / 2 - 150, screenHeight / 2 - 100, 30, ORANGE);
-                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
-                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
-                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
-                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, ORANGE);
+                DrawText("Select Leaderboard Mode", screenWidth / 2 - 150, screenHeight / 2 - 100, 30, WHITE);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, WHITE);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, WHITE);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, WHITE);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, WHITE);
                 break;
 
             case MODE_SELECT:
-                DrawText("Select Game Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 30, ORANGE);
-                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
-                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
-                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
-                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, ORANGE);
+                DrawText("Select Game Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 30, WHITE);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, WHITE);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, WHITE);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, WHITE);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, WHITE);
                 break;
 
             case GAMEPLAY:
@@ -459,16 +459,16 @@ int main() {
                     DrawTexture(marshmallows[i].texture, marshmallows[i].position.x, marshmallows[i].position.y, WHITE);
                 }
 
-                DrawText(TextFormat("Score: %d", score), 10, 10, 20, ORANGE);
+                DrawText(TextFormat("Score: %d", score), 10, 10, 20, WHITE);
                 if (currentMode == TIMED) {
-                    DrawText(TextFormat("Time: %.1f", timeRemaining), screenWidth - 150, 10, 20, ORANGE);
+                    DrawText(TextFormat("Time: %.1f", timeRemaining), screenWidth - 150, 10, 20, WHITE);
                 }
                 break;
 
             case ENDING:
-                DrawText("Congratulations!", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, ORANGE);
-                DrawText(TextFormat("Your Score: %d", score), screenWidth / 2 - 100, screenHeight / 2 + 20, 30, ORANGE);
-                DrawText("Press Enter to return to Title Screen", screenWidth / 2 - 250, screenHeight / 2 + 60, 20, ORANGE);
+                DrawText("Congratulations!", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, WHITE);
+                DrawText(TextFormat("Your Score: %d", score), screenWidth / 2 - 100, screenHeight / 2 + 20, 30, WHITE);
+                DrawText("Press Enter to return to Title Screen", screenWidth / 2 - 250, screenHeight / 2 + 60, 20, WHITE);
 
                 DisplayLeaderboard();  // Show leaderboard on ending screen
                 break;
