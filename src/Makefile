@@ -378,10 +378,8 @@ endif
 
 # Define all source files required
 PROJECT_SOURCE_FILES ?= \
-    marshmallow_ghost_stack.cpp \
-    # screen_logo.cpp \
-    # screen_title.cpp \
-    # screen_gameplay.cpp
+    marshmallow_ghost_stack.cpp 
+
 
 # Define all object files from source files
 OBJS = $(patsubst %.c, %.o, $(PROJECT_SOURCE_FILES))

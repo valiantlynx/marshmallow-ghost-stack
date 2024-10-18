@@ -141,7 +141,7 @@ void DisplayLeaderboard() {
         DrawText(TextFormat("Current Mode: %s", GetGameModeString(currentLeaderboardMode)), screenWidth / 2 - 150, 140, 20, ORANGE);
         for (size_t i = 0; i < leaderboard.size(); i++) {
             DrawText(TextFormat("%d. %s - Score: %d, Time: %.1f sec", i + 1, leaderboard[i].name.c_str(), leaderboard[i].score, leaderboard[i].time),
-                     screenWidth / 2 - 200, 150 + (int)i * 30, 20, ORANGE);
+                     screenWidth / 2 - 200, 180 + (int)i * 30, 20, ORANGE);
         }
     }
 }
