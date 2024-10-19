@@ -7,10 +7,36 @@
 // Define game screens and modes
 typedef enum GameScreen { LOGO = 0, TITLE, INSTRUCTIONS, MODE_SELECT, NAME_INPUT, GAMEPLAY, ENDING, LEADERBOARD_SELECTION } GameScreen;
 typedef enum GameMode { EASY = 0, NORMAL, HARD, TIMED } GameMode;
+//#define PLATFORM_WEB
 
-// Window dimensions
+#if defined(PLATFORM_WEB)
+    #include <emscripten/emscripten.h>
+#endif
+
+//----------------------------------------------------------------------------------
+// Global Variables Definition
+//----------------------------------------------------------------------------------
+const std::string BASE_PATH = "../../"; // this is the path ehere you will run the executable form
+
 const int screenWidth = 800;
 const int screenHeight = 600;
+
+Music backgroundMusic;
+Texture2D background, platformTexture, bonfireTexture;
+Sound clickSound, burnSound;
+float deltaTime = 0.0f;
+float roastingSpeed = 1.0f;
+float timeRemaining = 30.0f;
+int winScore = 50;
+int score = 0;
+int letterCount = 0;
+bool displayLeaderboard = false;
+char playerName[32] = "";
+GameScreen currentScreen = TITLE;
+GameMode currentMode = EASY;
+
+// Declare the marshmallow texture array globally
+Texture2D marshmallowTextures[4];
 
 // Define the marshmallow structure
 struct Marshmallow {
@@ -37,6 +63,9 @@ sqlite3 *db;
 std::vector<LeaderboardEntry> leaderboard;
 GameMode currentLeaderboardMode = EASY; // Track the current mode displayed on the leaderboard
 
+//----------------------------------------------------------------------------------
+// Module functions declaration
+//----------------------------------------------------------------------------------
 // Function to reset marshmallow state
 void ResetMarshmallow(Marshmallow &m, Texture2D textures[]) {
     m.state = 0;
@@ -135,13 +164,13 @@ void LoadLeaderboard(const char *mode) {
 // Display leaderboard
 void DisplayLeaderboard() {
     if (leaderboard.empty()) {
-        DrawText("No leaderboard data yet.", screenWidth / 2 - 150, 200, 30, ORANGE);
+        DrawText("No leaderboard data yet.", screenWidth / 2 - 150, 200, 30, WHITE);
     } else {
-        DrawText("Leaderboard", screenWidth / 2 - 100, 100, 30, ORANGE);
-        DrawText(TextFormat("Current Mode: %s", GetGameModeString(currentLeaderboardMode)), screenWidth / 2 - 150, 140, 20, ORANGE);
+        DrawText("Leaderboard", screenWidth / 2 - 100, 100, 30, WHITE);
+        DrawText(TextFormat("Current Mode: %s", GetGameModeString(currentLeaderboardMode)), screenWidth / 2 - 150, 140, 20, WHITE);
         for (size_t i = 0; i < leaderboard.size(); i++) {
             DrawText(TextFormat("%d. %s - Score: %d, Time: %.1f sec", i + 1, leaderboard[i].name.c_str(), leaderboard[i].score, leaderboard[i].time),
-                     screenWidth / 2 - 200, 180 + (int)i * 30, 20, ORANGE);
+                     screenWidth / 2 - 200, 180 + (int)i * 30, 20, WHITE);
         }
     }
 }
@@ -155,65 +184,145 @@ Texture2D LoadTextureAndResize(const char* fileName, int width, int height) {
     return texture;
 }
 
-// Main game entry
-int main() {
+// Background scrolling variables for parallax effect
+struct ParallaxLayer {
+    Texture2D texture;
+    float scrollingOffset;
+    float speed;
+};
+
+ParallaxLayer parallaxLayers[5];
+
+// Function to update a specific parallax layer if it has a non-zero speed
+void UpdateParallaxLayer(ParallaxLayer &layer, float deltaTime) {
+    if (layer.speed != 0.0f) {
+        layer.scrollingOffset -= layer.speed * deltaTime;
+        if (layer.scrollingOffset <= -layer.texture.width) {
+            layer.scrollingOffset = 0;
+        }
+    }
+}
+
+// Function to initialize parallax layers
+void InitializeParallaxLayers() {
+    parallaxLayers[0] = { LoadTextureAndResize((BASE_PATH + "resources/textures/parallax/background 2/Plan-5.png").c_str(), screenWidth, screenHeight), 0.0f, 50.0f }; // Static background
+    parallaxLayers[1] = { LoadTextureAndResize((BASE_PATH + "resources/textures/parallax/background 2/Plan-4.png").c_str(), screenWidth, screenHeight), 0.0f, 1.0f }; // Slow moving clouds
+    parallaxLayers[2] = { LoadTextureAndResize((BASE_PATH + "resources/textures/parallax/background 2/Plan-3.png").c_str(), screenWidth, screenHeight), 0.0f, 0.0f }; // Static mountains
+    parallaxLayers[3] = { LoadTextureAndResize((BASE_PATH + "resources/textures/parallax/background 2/Plan-2.png").c_str(), screenWidth, screenHeight), 0.0f, 0.0f }; // Moving trees
+    parallaxLayers[4] = { LoadTextureAndResize((BASE_PATH + "resources/textures/parallax/background 2/Plan-1.png").c_str(), screenWidth, screenHeight), 0.0f, 25.0f }; // Fast moving foreground
+}
+
+// Function to draw the parallax layers
+void DrawParallaxLayers() {
+    for (int i = 0; i < 5; i++) {
+        DrawTextureEx(parallaxLayers[i].texture, (Vector2){ parallaxLayers[i].scrollingOffset, 0 }, 0.0f, 1.0f, WHITE);
+        DrawTextureEx(parallaxLayers[i].texture, (Vector2){ parallaxLayers[i].scrollingOffset + parallaxLayers[i].texture.width, 0 }, 0.0f, 1.0f, WHITE);
+    }
+}
+// Function to reset the game
+void ResetGame() {
+    score = 0;
+    timeRemaining = 30.0f;
+    for (int i = 0; i < 4; i++) {
+        ResetMarshmallow(marshmallows[i], marshmallowTextures);
+    }
+}
+
+void UpdateDrawFrame(void);     // Update and Draw one frame
+
+
+//------------------------------------------------------------------------------------
+// Program main entry point
+//------------------------------------------------------------------------------------
+int main(void)
+{
     // Initialization
-    InitWindow(screenWidth, screenHeight, "Marshmallow Roasting Game");
+    InitWindow(screenWidth, screenHeight, "Marshmallow Roasting Game with Parallax Background");
     InitAudioDevice();
     SetTargetFPS(60);
     InitDatabase();
     LoadLeaderboard("EASY");  // Load leaderboard for default game mode (EASY)
 
     // Load and resize assets
-    Texture2D background = LoadTextureAndResize("resources/textures/background.png", screenWidth, screenHeight);
-    Texture2D marshmallowTextures[4] = {
-        LoadTextureAndResize("resources/images/marshmallow_white.png", 64, 64),
-        LoadTextureAndResize("resources/images/marshmallow_yellow.png", 64, 64),
-        LoadTextureAndResize("resources/images/marshmallow_brown.png", 64, 64),
-        LoadTextureAndResize("resources/images/marshmallow_black.png", 64, 64)
-    };
-    Texture2D platformTexture = LoadTextureAndResize("resources/images/wooden_platform.png", 600, 32); 
-    Texture2D bonfireTexture = LoadTextureAndResize("resources/images/bonfire.png", 128, 128);
-    Sound clickSound = LoadSound("resources/audio/click-sound.mp3");
-    Sound burnSound = LoadSound("resources/audio/burn-sound.mp3");
+    background = LoadTextureAndResize((BASE_PATH + "resources/textures/background.png").c_str(), screenWidth, screenHeight);
+    marshmallowTextures[0] = LoadTextureAndResize((BASE_PATH + "resources/images/marshmallow_white.png").c_str(), 64, 64);
+    marshmallowTextures[1] = LoadTextureAndResize((BASE_PATH + "resources/images/marshmallow_yellow.png").c_str(), 64, 64);
+    marshmallowTextures[2] = LoadTextureAndResize((BASE_PATH + "resources/images/marshmallow_brown.png").c_str(), 64, 64);
+    marshmallowTextures[3] = LoadTextureAndResize((BASE_PATH + "resources/images/marshmallow_black.png").c_str(), 64, 64);
 
-    Music backgroundMusic = LoadMusicStream("resources/audio/ritual.ogg");
+    platformTexture = LoadTextureAndResize((BASE_PATH + "resources/images/wooden_platform.png").c_str(), 600, 32); 
+    bonfireTexture = LoadTextureAndResize((BASE_PATH + "resources/images/bonfire.png").c_str(), 128, 128);
+    
+    // Load sound/music once and unload at the end
+    clickSound = LoadSound((BASE_PATH + "resources/audio/click-sound.mp3").c_str());
+    burnSound = LoadSound((BASE_PATH + "resources/audio/burn-sound.mp3").c_str());
+    backgroundMusic = LoadMusicStream((BASE_PATH + "resources/audio/ritual.ogg").c_str());
     PlayMusicStream(backgroundMusic);
 
-    // Initialize game state variables
-    GameScreen currentScreen = TITLE;
-    GameMode currentMode = EASY;
-    int score = 0;
-    float deltaTime = 0.0f;
-    float roastingSpeed = 1.0f;
-    int winScore = 50;
-    float timeRemaining = 30.0f;  // For timed mode
-    char playerName[32] = "";
-    bool displayLeaderboard = false;
-    int letterCount = 0;
+    // Initialize parallax layers
+    InitializeParallaxLayers();
 
-    // Marshmallows initialization
+
     marshmallows[0] = {{150, 200}, 0, 0.0f, marshmallowTextures[0], {150, 200, 64, 64}};
     marshmallows[1] = {{600, 200}, 0, 0.0f, marshmallowTextures[0], {600, 200, 64, 64}};
     marshmallows[2] = {{150, 350}, 0, 0.0f, marshmallowTextures[0], {150, 350, 64, 64}};
     marshmallows[3] = {{600, 350}, 0, 0.0f, marshmallowTextures[0], {600, 350, 64, 64}};
 
-    // Function to reset the game state
-    auto ResetGame = [&]() {
-        score = 0;
-        timeRemaining = 30.0f;  // Reset time for timed mode
-        // Reset all marshmallows
-        for (int i = 0; i < 4; i++) {
-            ResetMarshmallow(marshmallows[i], marshmallowTextures);
-        }
-    };
 
-    while (!WindowShouldClose()) {
-        // Update game state
-        deltaTime = GetFrameTime();
-        UpdateMusicStream(backgroundMusic);
+#if defined(PLATFORM_WEB)
+    emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
+#else
+    SetTargetFPS(60);   // Set our game to run at 60 frames-per-second
+    //--------------------------------------------------------------------------------------
 
-        switch (currentScreen) {
+    // Main game loop
+    while (!WindowShouldClose())    // Detect window close button or ESC key
+    {
+        UpdateDrawFrame();
+    }
+#endif
+     // Free resources
+    for (int i = 0; i < 4; i++) {
+        UnloadTexture(marshmallowTextures[i]);
+    }
+    UnloadTexture(platformTexture);
+    UnloadTexture(bonfireTexture);
+
+    // Unload parallax layers
+    for (int i = 0; i < 5; i++) {
+        UnloadTexture(parallaxLayers[i].texture);
+    }
+
+    // Unload sounds and music
+    UnloadSound(clickSound);
+    UnloadSound(burnSound);
+    UnloadMusicStream(backgroundMusic);
+
+    sqlite3_close(db);  // Close database
+    // De-Initialization
+    //--------------------------------------------------------------------------------------
+    CloseWindow();        // Close window and OpenGL context
+    //--------------------------------------------------------------------------------------
+
+    return 0;
+}
+
+//----------------------------------------------------------------------------------
+// Module Functions Definition
+//----------------------------------------------------------------------------------
+void UpdateDrawFrame(void)
+{
+    // Update
+    //----------------------------------------------------------------------------------
+    deltaTime = GetFrameTime();
+    UpdateMusicStream(backgroundMusic); // Update the music stream properly
+
+    // Update parallax backgrounds
+    for (int i = 0; i < 5; i++) {
+        UpdateParallaxLayer(parallaxLayers[i], deltaTime);
+    }
+
+    switch (currentScreen) {
             case LOGO:
                 if (IsKeyPressed(KEY_ENTER)) currentScreen = TITLE;
                 break;
@@ -228,11 +337,11 @@ int main() {
                 break;
 
             case LEADERBOARD_SELECTION:
-                DrawText("Select Leaderboard Mode", screenWidth / 2 - 150, screenHeight / 2 - 100, 30, ORANGE);
-                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
-                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
-                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
-                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, ORANGE);
+                DrawText("Select Leaderboard Mode", screenWidth / 2 - 150, screenHeight / 2 - 100, 30, WHITE);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, WHITE);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, WHITE);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, WHITE);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, WHITE);
 
                 if (IsKeyPressed(KEY_ONE)) {
                     currentLeaderboardMode = EASY;
@@ -258,11 +367,11 @@ int main() {
                 break;
 
             case MODE_SELECT:
-                DrawText("Select Game Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 30, ORANGE);
-                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
-                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
-                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
-                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, ORANGE);
+                DrawText("Select Game Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 30, WHITE);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, WHITE);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, WHITE);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, WHITE);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, WHITE);
                 
                 if (IsKeyPressed(KEY_ONE)) {
                     currentMode = EASY;
@@ -289,8 +398,8 @@ int main() {
                 break;
 
             case INSTRUCTIONS:
-                DrawText("Instructions: Roast marshmallows to score points.", screenWidth / 2 - 200, screenHeight / 2 - 50, 20, ORANGE);
-                DrawText("Press Enter to return to the Title screen.", screenWidth / 2 - 200, screenHeight / 2, 20, ORANGE);
+                DrawText("Instructions: Roast marshmallows to score points.", screenWidth / 2 - 200, screenHeight / 2 - 50, 20, WHITE);
+                DrawText("Press Enter to return to the Title screen.", screenWidth / 2 - 200, screenHeight / 2, 20, WHITE);
                 if (IsKeyPressed(KEY_ENTER)) {
                     currentScreen = TITLE;
                 }
@@ -312,7 +421,7 @@ int main() {
                 }
 
                 DrawText("Enter your name:", screenWidth / 2 - 150, screenHeight / 2 - 50, 20, DARKGRAY);
-                DrawText(playerName, screenWidth / 2 - 150, screenHeight / 2, 30, ORANGE);
+                DrawText(playerName, screenWidth / 2 - 150, screenHeight / 2, 30, WHITE);
                 break;
             }
 
@@ -360,50 +469,57 @@ int main() {
                 break;
         }
 
-        BeginDrawing();
+    //----------------------------------------------------------------------------------
+
+    // Draw
+    //----------------------------------------------------------------------------------
+    BeginDrawing();
         ClearBackground(RAYWHITE);
+
+         // Draw the parallax background layers
+        DrawParallaxLayers();
 
         switch (currentScreen) {
             case LOGO:
-                DrawText("LOGO SCREEN", screenWidth / 2 - 100, screenHeight / 2 - 20, 40, ORANGE);
+                DrawText("LOGO SCREEN", screenWidth / 2 - 100, screenHeight / 2 - 20, 40, WHITE);
                 break;
 
             case TITLE:
                 DrawTexture(background, 0, 0, WHITE);
-                DrawText("Marshmallow Roasting Game", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, ORANGE);
-                DrawText("Press Enter to Continue", screenWidth / 2 - 150, screenHeight / 2 + 40, 20, ORANGE);
-                DrawText("Press 'L' to View Leaderboard", screenWidth / 2 - 150, screenHeight / 2 + 80, 20, ORANGE);
+                DrawText("Marshmallow Roasting Game", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, WHITE);
+                DrawText("Press Enter to Continue", screenWidth / 2 - 150, screenHeight / 2 + 40, 20, WHITE);
+                DrawText("Press 'L' to View Leaderboard", screenWidth / 2 - 150, screenHeight / 2 + 80, 20, WHITE);
                 if (displayLeaderboard) {
                     DisplayLeaderboard();
                 }
                 break;
 
             case INSTRUCTIONS:
-                DrawText("Instructions: Roast marshmallows to score points.", screenWidth / 2 - 200, screenHeight / 2 - 50, 20, ORANGE);
-                DrawText("Press Enter to return to the Title screen.", screenWidth / 2 - 200, screenHeight / 2, 20, ORANGE);
+                DrawText("Instructions: Roast marshmallows to score points.", screenWidth / 2 - 200, screenHeight / 2 - 50, 20, WHITE);
+                DrawText("Press Enter to return to the Title screen.", screenWidth / 2 - 200, screenHeight / 2, 20, WHITE);
                 break;
             
 
             case NAME_INPUT: {
                 DrawText("Enter your name:", screenWidth / 2 - 150, screenHeight / 2 - 50, 20, DARKGRAY);
-                DrawText(playerName, screenWidth / 2 - 150, screenHeight / 2, 30, ORANGE);
+                DrawText(playerName, screenWidth / 2 - 150, screenHeight / 2, 30, WHITE);
                 break;
             }
 
             case LEADERBOARD_SELECTION:
-                DrawText("Select Leaderboard Mode", screenWidth / 2 - 150, screenHeight / 2 - 100, 30, ORANGE);
-                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
-                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
-                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
-                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, ORANGE);
+                DrawText("Select Leaderboard Mode", screenWidth / 2 - 150, screenHeight / 2 - 100, 30, WHITE);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, WHITE);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, WHITE);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, WHITE);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, WHITE);
                 break;
 
             case MODE_SELECT:
-                DrawText("Select Game Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 30, ORANGE);
-                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, ORANGE);
-                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, ORANGE);
-                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, ORANGE);
-                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, ORANGE);
+                DrawText("Select Game Mode", screenWidth / 2 - 100, screenHeight / 2 - 100, 30, WHITE);
+                DrawText("1. Easy", screenWidth / 2 - 100, screenHeight / 2 - 60, 20, WHITE);
+                DrawText("2. Normal", screenWidth / 2 - 100, screenHeight / 2 - 20, 20, WHITE);
+                DrawText("3. Hard", screenWidth / 2 - 100, screenHeight / 2 + 20, 20, WHITE);
+                DrawText("4. Timed", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, WHITE);
                 break;
 
             case GAMEPLAY:
@@ -415,38 +531,20 @@ int main() {
                     DrawTexture(marshmallows[i].texture, marshmallows[i].position.x, marshmallows[i].position.y, WHITE);
                 }
 
-                DrawText(TextFormat("Score: %d", score), 10, 10, 20, ORANGE);
+                DrawText(TextFormat("Score: %d", score), 10, 10, 20, WHITE);
                 if (currentMode == TIMED) {
-                    DrawText(TextFormat("Time: %.1f", timeRemaining), screenWidth - 150, 10, 20, ORANGE);
+                    DrawText(TextFormat("Time: %.1f", timeRemaining), screenWidth - 150, 10, 20, WHITE);
                 }
                 break;
 
             case ENDING:
-                DrawText("Congratulations!", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, ORANGE);
-                DrawText(TextFormat("Your Score: %d", score), screenWidth / 2 - 100, screenHeight / 2 + 20, 30, ORANGE);
-                DrawText("Press Enter to return to Title Screen", screenWidth / 2 - 250, screenHeight / 2 + 60, 20, ORANGE);
+                DrawText("Congratulations!", screenWidth / 2 - 200, screenHeight / 2 - 20, 40, WHITE);
+                DrawText(TextFormat("Your Score: %d", score), screenWidth / 2 - 100, screenHeight / 2 + 20, 30, WHITE);
+                DrawText("Press Enter to return to Title Screen", screenWidth / 2 - 250, screenHeight / 2 + 60, 20, WHITE);
 
                 DisplayLeaderboard();  // Show leaderboard on ending screen
                 break;
         }
 
-        EndDrawing();
-    }
-
-    for (int i = 0; i < 4; i++) {
-        UnloadTexture(marshmallowTextures[i]);
-    }
-    UnloadTexture(platformTexture);
-    UnloadTexture(bonfireTexture);
-    UnloadTexture(background);
-    UnloadSound(clickSound);
-    UnloadSound(burnSound);
-    UnloadMusicStream(backgroundMusic);
-    CloseAudioDevice();
-
-    sqlite3_close(db);  // Close database
-
-    CloseWindow();
-
-    return 0;
+    EndDrawing();
 }
