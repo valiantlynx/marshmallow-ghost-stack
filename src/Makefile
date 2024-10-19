@@ -20,20 +20,13 @@
 #     3. This notice may not be removed or altered from any source distribution.
 #
 #**************************************************************************************************
-# Define output directories for different platforms
-USER_DIR         ?= /home/valiantlynx
-PROJECT_DIR      ?= $(USER_DIR)/projects/marshmallow-ghost-stack
-
-WEB_BUILD_DIR    ?= $(PROJECT_DIR)/src/
-LINUX_BUILD_DIR  ?= $(PROJECT_DIR)/src/build/linux
-RPI_BUILD_DIR    ?= $(PROJECT_DIR)/src/build/rpi 
 
 .PHONY: all clean
 
 # Define required variables
 PROJECT_NAME       ?= marshmallow_ghost_stack
 RAYLIB_VERSION     ?= 3.8.0
-RAYLIB_PATH        ?= $(USER_DIR)/raylib
+RAYLIB_PATH        ?= /home/valiantlynx/raylib
 
 # Define default options
 
@@ -132,7 +125,7 @@ endif
 
 ifeq ($(PLATFORM),PLATFORM_WEB)
     # Emscripten required variables
-    EMSDK_PATH         ?= $(USER_DIR)/emsdk
+    EMSDK_PATH         ?= C:/emsdk
     EMSCRIPTEN_PATH    ?= $(EMSDK_PATH)/upstream/emscripten
     CLANG_PATH          = $(EMSDK_PATH)/upstream/bin
     PYTHON_PATH         = $(EMSDK_PATH)/python/3.9.2-1_64bit
@@ -381,7 +374,7 @@ endif
 ifeq ($(PLATFORM),PLATFORM_WEB)
     # Libraries for web (HTML5) compiling
     LDLIBS = $(RAYLIB_RELEASE_PATH)/libraylib.a \
-              $(USER_DIR)/sqlite-autoconf-3460100/libsqlite3.o
+              /home/valiantlynx/sqlite-autoconf-3460100/libsqlite3.o
     
     CFLAGS += -DPLATFORM_WEB \
                 -s ASYNCIFY \
@@ -395,29 +388,18 @@ ifeq ($(PLATFORM),PLATFORM_WEB)
                 -s 'EXPORTED_FUNCTIONS=["_free", "_malloc", "_main"]' \
                 -s EXPORTED_RUNTIME_METHODS=ccall \
                 --preload-file resources \
-              --shell-file $(PROJECT_DIR)/src/shell.html \
-              --preload-file $(PROJECT_DIR)/src/leaderboard.db@/leaderboard.db \
-              -I$(USER_DIR)/sqlite-autoconf-3460100 
+              --shell-file $(RAYLIB_PATH)/src/shell.html \
+              --preload-file /home/valiantlynx/projects/marshmallow-ghost-stack/src/leaderboard.db@/leaderboard.db \
+              -I/home/valiantlynx/sqlite-autoconf-3460100 
 endif
 
 # Define all source files required
 PROJECT_SOURCE_FILES ?= \
     marshmallow_ghost_stack.cpp 
 
-# Define output directory based on platform
-ifeq ($(PLATFORM),PLATFORM_WEB)
-    BUILD_DIR = $(WEB_BUILD_DIR)
-else ifeq ($(PLATFORM),PLATFORM_DESKTOP)
-    BUILD_DIR = $(LINUX_BUILD_DIR)
-else ifeq ($(PLATFORM),PLATFORM_RPI)
-    BUILD_DIR = $(RPI_BUILD_DIR)
-endif
 
 # Define all object files from source files
-OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(PROJECT_SOURCE_FILES))
-
-# Create build directories if they don't exist
-$(shell mkdir -p $(BUILD_DIR))
+OBJS = $(patsubst %.c, %.o, $(PROJECT_SOURCE_FILES))
 
 # For Android platform we call a custom Makefile.Android
 ifeq ($(PLATFORM),PLATFORM_ANDROID)
@@ -430,14 +412,16 @@ endif
 
 # Default target entry
 # NOTE: We call this Makefile target or Makefile.Android target
-all:$(BUILD_DIR)/$(PROJECT_NAME)$(EXT)
+all:
+	$(MAKE) $(MAKEFILE_PARAMS)
 
 # Project target defined by PROJECT_NAME
-$(BUILD_DIR)/$(PROJECT_NAME): $(OBJS)
+$(PROJECT_NAME): $(OBJS)
 	$(CC) -o $(PROJECT_NAME)$(EXT) $(OBJS) $(CFLAGS) $(INCLUDE_PATHS) $(LDFLAGS) $(LDLIBS) -D$(PLATFORM)
 
 # Compile source files
-$(BUILD_DIR)/%.o: %.cpp
+# NOTE: This pattern will compile every module defined on $(OBJS)
+%.o: %.c
 	$(CC) -c $< -o $@ $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM)
 
 # Clean everything
@@ -447,7 +431,8 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
 		del *.o *.exe /s
     endif
     ifeq ($(PLATFORM_OS),LINUX)
-		rm -rf $(BUILD_DIR)
+		find . -type f -executable -delete
+		rm -fv *.o
     endif
     ifeq ($(PLATFORM_OS),OSX)
 		find . -type f -perm +ugo+x -delete
@@ -463,7 +448,7 @@ ifeq ($(PLATFORM),PLATFORM_DRM)
 	rm -fv *.o
 endif
 ifeq ($(PLATFORM),PLATFORM_WEB)
-	rm -rf $(BUILD_DIR)
+	del *.o *.html *.js
 endif
 	@echo Cleaning done
 

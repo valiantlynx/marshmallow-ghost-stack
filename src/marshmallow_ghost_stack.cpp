@@ -16,7 +16,7 @@ typedef enum GameMode { EASY = 0, NORMAL, HARD, TIMED } GameMode;
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
-const std::string BASE_PATH = "../../";
+const std::string BASE_PATH = "../../"; // this is the path ehere you will run the executable form
 
 const int screenWidth = 800;
 const int screenHeight = 600;
