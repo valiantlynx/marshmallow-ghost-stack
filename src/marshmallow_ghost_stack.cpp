@@ -106,7 +106,7 @@ const char* GetGameModeString(GameMode mode) {
 
 // Initialize the database
 void InitDatabase() {
-    if (sqlite3_open("leaderboard.db", &db)) {
+    if (sqlite3_open((BASE_PATH + "leaderboard.db").c_str(), &db)) {
         TraceLog(LOG_ERROR, "Can't open database: %s", sqlite3_errmsg(db));
     } else {
         const char *sql = "CREATE TABLE IF NOT EXISTS leaderboard (id INTEGER PRIMARY KEY, name TEXT, score INT, time FLOAT, mode TEXT);";
