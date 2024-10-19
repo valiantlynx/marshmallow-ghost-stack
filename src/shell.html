@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="EN-us">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+    <title>Marshmallow Ghost Stack by valiantlynx</title>
+
+    <meta name="title" content="Marshmallow Ghost Stack by valiantlynx" />
+    <meta
+      name="description"
+      content="Web game developed using raylib, brought to you by valiantlynx"
+    />
+    <meta
+      name="keywords"
+      content="raylib, programming, games, webgame, C++, tailwind, valiantlynx, marshmallow ghost stack"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Open Graph metatags for sharing -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Marshmallow Ghost Stack by valiantlynx" />
+    <meta property="og:image:type" content="image/png" />
+    <meta
+      property="og:image:alt"
+      content="Web game developed by valiantlynx using raylib"
+    />
+    <meta
+      property="og:image"
+      content="./resources/logo.png"
+    />
+    <meta property="og:site_name" content="Marshmallow Ghost Stack by valiantlynx" />
+    <meta property="og:url" content="https://www.valiantlynx.com" />
+    <meta
+      property="og:description"
+      content="Web game developed by valiantlynx using raylib"
+    />
+
+    <!-- Twitter metatags for sharing -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@valiantlynxz" />
+    <meta name="twitter:title" content="Marshmallow Ghost Stack by valiantlynx" />
+    <meta
+      name="twitter:image"
+      content="./resources/screenshots/game.png"
+    />
+    <meta
+      name="twitter:image:alt"
+      content="Web game developed by valiantlynx using raylib"
+    />
+    <meta name="twitter:url" content="https://www.valiantlynx.com" />
+    <meta
+      name="twitter:description"
+      content="Web game developed by valiantlynx using raylib"
+    />
+
+    <!-- Tailwind CSS -->
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #1a202c; /* Tailwind bg-gray-900 */
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+      }
+      #logo {
+        width: 64px;
+        height: 64px;
+        background-image: url("https://www.raylib.com/common/raylib_logo.png");
+        background-size: cover;
+        border-radius: 50%;
+        margin-bottom: 10px;
+      }
+      #header {
+        width: 100%;
+        background-color: #2d3748; /* Tailwind bg-gray-800 */
+        text-align: center;
+        padding: 20px;
+      }
+      #status {
+        margin-top: 20px;
+        font-weight: bold;
+        color: #cbd5e0; /* Tailwind text-gray-300 */
+      }
+      #spinner {
+        height: 30px;
+        width: 30px;
+        border-top: 4px solid #f56565; /* Tailwind border-red-500 */
+        border-right: 4px solid transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      input[type="button"] {
+        background-color: #4299e1; /* Tailwind bg-blue-600 */
+        color: white;
+        padding: 10px 20px;
+        border-radius: 4px;
+        font-weight: bold;
+        margin: 5px;
+        transition: background-color 0.2s;
+      }
+      input[type="button"]:hover {
+        background-color: #2b6cb0; /* Tailwind hover:bg-blue-700 */
+      }
+      textarea {
+        width: 100%;
+        height: 140px;
+        background-color: #2d3748; /* Tailwind bg-gray-800 */
+        color: #68d391; /* Tailwind text-green-400 */
+        padding: 10px;
+        border-radius: 5px;
+        font-family: "Lucida Console", monospace;
+      }
+
+      /* Responsive canvas for mobile and desktop */
+      #canvas {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header Section -->
+    <header id="header">
+      <div id="logo" class="mx-auto"></div>
+      <h1 class="text-2xl font-bold mt-2">
+        Marshmallow Ghost Stack by valiantlynx
+      </h1>
+    </header>
+
+    <!-- Status and Controls -->
+    <div id="status">Downloading...</div>
+    <div id="spinner" class="mx-auto"></div>
+
+    <!-- Controls Buttons -->
+    <div id="controls">
+      <input
+        type="button"
+        value="📜 Source Code"
+        onclick="location.href='https://github.com/raysan5/raylib';"
+      />
+      <input
+        type="button"
+        value="🖵 Fullscreen"
+        onclick="Module.requestFullscreen(false, false)"
+      />
+      <input
+        type="button"
+        id="btn-audio"
+        value="🔇 Mute"
+        onclick="toggleAudio()"
+      />
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="canvas" class="emscripten"></canvas>
+
+    <!-- Console Output -->
+    <textarea id="output" rows="8"></textarea>
+
+    <!-- FileSaver.js -->
+    <script src="https://cdn.jsdelivr.net/gh/eligrey/FileSaver.js/dist/FileSaver.min.js"></script>
+
+    <script type="text/javascript">
+      // Save File from MEMFS to disk
+      function saveFileFromMEMFSToDisk(memoryFSname, localFSname) {
+        var data = FS.readFile(memoryFSname);
+        var blob = new Blob([data.buffer], {
+          type: "application/octet-binary",
+        });
+        saveAs(blob, localFSname);
+      }
+
+      // Initialize Module
+      var statusElement = document.querySelector("#status");
+      var spinnerElement = document.querySelector("#spinner");
+      var Module = {
+        preRun: [],
+        postRun: [],
+        print: function (text) {
+          var element = document.querySelector("#output");
+          if (element) {
+            element.value += text + "\n";
+            element.scrollTop = element.scrollHeight;
+          }
+        },
+        canvas: document.querySelector("#canvas"),
+        setStatus: function (text) {
+          if (text) statusElement.textContent = text;
+        },
+      };
+
+      Module.setStatus("Downloading...");
+
+      window.onerror = function () {
+        Module.setStatus("Exception thrown, see JavaScript console");
+        spinnerElement.style.display = "none";
+      };
+    </script>
+
+    <script type="text/javascript">
+      var audioBtn = document.getElementById("btn-audio");
+      const audioContexList = [];
+      (function () {
+        self.AudioContext = new Proxy(self.AudioContext, {
+          construct(target, args) {
+            const result = new target(...args);
+            audioContexList.push(result);
+            if (result.state === "suspended") audioBtn.value = "🔈 Resume";
+            return result;
+          },
+        });
+      })();
+
+      function toggleAudio() {
+        let resumed = false;
+        audioContexList.forEach((ctx) => {
+          if (ctx.state === "suspended") {
+            ctx.resume();
+            resumed = true;
+          } else if (ctx.state === "running") ctx.suspend();
+        });
+        audioBtn.value = resumed ? "🔇 Mute" : "🔈 Resume";
+      }
+    </script>
+
+    {{{ SCRIPT }}}
+  </body>
+</html>

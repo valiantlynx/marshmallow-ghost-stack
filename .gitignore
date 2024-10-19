@@ -61,12 +61,12 @@ dkms.conf
 *.user
 .vs
 
-# Build folder
-[Bb]uild
-
 # WebAssembly generated files
 *.data
 *.js
 *.html
 *.wasm
 
+# Exceptions to commit
+!src/build/**
+!shell.html
