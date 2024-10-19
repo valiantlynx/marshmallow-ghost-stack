@@ -16,6 +16,8 @@ typedef enum GameMode { EASY = 0, NORMAL, HARD, TIMED } GameMode;
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
+const std::string BASE_PATH = "../../";
+
 const int screenWidth = 800;
 const int screenHeight = 600;
 
@@ -203,11 +205,11 @@ void UpdateParallaxLayer(ParallaxLayer &layer, float deltaTime) {
 
 // Function to initialize parallax layers
 void InitializeParallaxLayers() {
-    parallaxLayers[0] = { LoadTextureAndResize("resources/textures/parallax/background 2/Plan-5.png", screenWidth, screenHeight), 0.0f, 50.0f }; // Static background
-    parallaxLayers[1] = { LoadTextureAndResize("resources/textures/parallax/background 2/Plan-4.png", screenWidth, screenHeight), 0.0f, 1.0f }; // Slow moving clouds
-    parallaxLayers[2] = { LoadTextureAndResize("resources/textures/parallax/background 2/Plan-3.png", screenWidth, screenHeight), 0.0f, 0.0f }; // Static mountains
-    parallaxLayers[3] = { LoadTextureAndResize("resources/textures/parallax/background 2/Plan-2.png", screenWidth, screenHeight), 0.0f, 0.0f }; // Moving trees
-    parallaxLayers[4] = { LoadTextureAndResize("resources/textures/parallax/background 2/Plan-1.png", screenWidth, screenHeight), 0.0f, 25.0f }; // Fast moving foreground
+    parallaxLayers[0] = { LoadTextureAndResize((BASE_PATH + "resources/textures/parallax/background 2/Plan-5.png").c_str(), screenWidth, screenHeight), 0.0f, 50.0f }; // Static background
+    parallaxLayers[1] = { LoadTextureAndResize((BASE_PATH + "resources/textures/parallax/background 2/Plan-4.png").c_str(), screenWidth, screenHeight), 0.0f, 1.0f }; // Slow moving clouds
+    parallaxLayers[2] = { LoadTextureAndResize((BASE_PATH + "resources/textures/parallax/background 2/Plan-3.png").c_str(), screenWidth, screenHeight), 0.0f, 0.0f }; // Static mountains
+    parallaxLayers[3] = { LoadTextureAndResize((BASE_PATH + "resources/textures/parallax/background 2/Plan-2.png").c_str(), screenWidth, screenHeight), 0.0f, 0.0f }; // Moving trees
+    parallaxLayers[4] = { LoadTextureAndResize((BASE_PATH + "resources/textures/parallax/background 2/Plan-1.png").c_str(), screenWidth, screenHeight), 0.0f, 25.0f }; // Fast moving foreground
 }
 
 // Function to draw the parallax layers
@@ -242,19 +244,19 @@ int main(void)
     LoadLeaderboard("EASY");  // Load leaderboard for default game mode (EASY)
 
     // Load and resize assets
-    background = LoadTextureAndResize("resources/textures/background.png", screenWidth, screenHeight);
-    marshmallowTextures[0] = LoadTextureAndResize("resources/images/marshmallow_white.png", 64, 64);
-    marshmallowTextures[1] = LoadTextureAndResize("resources/images/marshmallow_yellow.png", 64, 64);
-    marshmallowTextures[2] = LoadTextureAndResize("resources/images/marshmallow_brown.png", 64, 64);
-    marshmallowTextures[3] = LoadTextureAndResize("resources/images/marshmallow_black.png", 64, 64);
+    background = LoadTextureAndResize((BASE_PATH + "resources/textures/background.png").c_str(), screenWidth, screenHeight);
+    marshmallowTextures[0] = LoadTextureAndResize((BASE_PATH + "resources/images/marshmallow_white.png").c_str(), 64, 64);
+    marshmallowTextures[1] = LoadTextureAndResize((BASE_PATH + "resources/images/marshmallow_yellow.png").c_str(), 64, 64);
+    marshmallowTextures[2] = LoadTextureAndResize((BASE_PATH + "resources/images/marshmallow_brown.png").c_str(), 64, 64);
+    marshmallowTextures[3] = LoadTextureAndResize((BASE_PATH + "resources/images/marshmallow_black.png").c_str(), 64, 64);
 
-    platformTexture = LoadTextureAndResize("resources/images/wooden_platform.png", 600, 32); 
-    bonfireTexture = LoadTextureAndResize("resources/images/bonfire.png", 128, 128);
+    platformTexture = LoadTextureAndResize((BASE_PATH + "resources/images/wooden_platform.png").c_str(), 600, 32); 
+    bonfireTexture = LoadTextureAndResize((BASE_PATH + "resources/images/bonfire.png").c_str(), 128, 128);
     
     // Load sound/music once and unload at the end
-    clickSound = LoadSound("resources/audio/click-sound.mp3");
-    burnSound = LoadSound("resources/audio/burn-sound.mp3");
-    backgroundMusic = LoadMusicStream("resources/audio/ritual.ogg");
+    clickSound = LoadSound((BASE_PATH + "resources/audio/click-sound.mp3").c_str());
+    burnSound = LoadSound((BASE_PATH + "resources/audio/burn-sound.mp3").c_str());
+    backgroundMusic = LoadMusicStream((BASE_PATH + "resources/audio/ritual.ogg").c_str());
     PlayMusicStream(backgroundMusic);
 
     // Initialize parallax layers
