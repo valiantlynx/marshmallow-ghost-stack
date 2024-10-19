@@ -94,6 +94,7 @@ or with cmake
 After compiling, you can run the game with the following command:
 
 ```bash
+cd build/linux
 ./marshmallow_game
 ```
 
@@ -126,7 +127,7 @@ emcc -o marshmallow_ghost_stack.html marshmallow_ghost_stack.cpp -Wall -std=c++1
 make[1]: Leaving directory '/home/valiantlynx/projects/marshmallow-ghost-stack/src'
 
 
-valiantlynx @ kombyoga in ~/.../marshmallow-ghost-stack/src |18:34:27 |c++ U:1 ✗|
+valiantlynx @ kombyoga in ~/.../marshmallow-ghost-stack/src/build/web |18:34:27 |c++ U:1 ✗|
 $ python3 -m http.server 8088
 Serving HTTP on 0.0.0.0 port 8088 (http://0.0.0.0:8088/) ...
 127.0.0.1 - - [19/Oct/2024 18:34:33] "GET /marshmallow_ghost_stack.html HTTP/1.1" 200 -
