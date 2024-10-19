@@ -7,10 +7,34 @@
 // Define game screens and modes
 typedef enum GameScreen { LOGO = 0, TITLE, INSTRUCTIONS, MODE_SELECT, NAME_INPUT, GAMEPLAY, ENDING, LEADERBOARD_SELECTION } GameScreen;
 typedef enum GameMode { EASY = 0, NORMAL, HARD, TIMED } GameMode;
+//#define PLATFORM_WEB
 
-// Window dimensions
+#if defined(PLATFORM_WEB)
+    #include <emscripten/emscripten.h>
+#endif
+
+//----------------------------------------------------------------------------------
+// Global Variables Definition
+//----------------------------------------------------------------------------------
 const int screenWidth = 800;
 const int screenHeight = 600;
+
+Music backgroundMusic;
+Texture2D background, platformTexture, bonfireTexture;
+Sound clickSound, burnSound;
+float deltaTime = 0.0f;
+float roastingSpeed = 1.0f;
+float timeRemaining = 30.0f;
+int winScore = 50;
+int score = 0;
+int letterCount = 0;
+bool displayLeaderboard = false;
+char playerName[32] = "";
+GameScreen currentScreen = TITLE;
+GameMode currentMode = EASY;
+
+// Declare the marshmallow texture array globally
+Texture2D marshmallowTextures[4];
 
 // Define the marshmallow structure
 struct Marshmallow {
@@ -37,6 +61,9 @@ sqlite3 *db;
 std::vector<LeaderboardEntry> leaderboard;
 GameMode currentLeaderboardMode = EASY; // Track the current mode displayed on the leaderboard
 
+//----------------------------------------------------------------------------------
+// Module functions declaration
+//----------------------------------------------------------------------------------
 // Function to reset marshmallow state
 void ResetMarshmallow(Marshmallow &m, Texture2D textures[]) {
     m.state = 0;
@@ -190,9 +217,23 @@ void DrawParallaxLayers() {
         DrawTextureEx(parallaxLayers[i].texture, (Vector2){ parallaxLayers[i].scrollingOffset + parallaxLayers[i].texture.width, 0 }, 0.0f, 1.0f, WHITE);
     }
 }
+// Function to reset the game
+void ResetGame() {
+    score = 0;
+    timeRemaining = 30.0f;
+    for (int i = 0; i < 4; i++) {
+        ResetMarshmallow(marshmallows[i], marshmallowTextures);
+    }
+}
 
-// Main game entry
-int main() {
+void UpdateDrawFrame(void);     // Update and Draw one frame
+
+
+//------------------------------------------------------------------------------------
+// Program main entry point
+//------------------------------------------------------------------------------------
+int main(void)
+{
     // Initialization
     InitWindow(screenWidth, screenHeight, "Marshmallow Roasting Game with Parallax Background");
     InitAudioDevice();
@@ -201,60 +242,85 @@ int main() {
     LoadLeaderboard("EASY");  // Load leaderboard for default game mode (EASY)
 
     // Load and resize assets
-    Texture2D background = LoadTextureAndResize("resources/textures/background.png", screenWidth, screenHeight);
-    Texture2D marshmallowTextures[4] = {
-        LoadTextureAndResize("resources/images/marshmallow_white.png", 64, 64),
-        LoadTextureAndResize("resources/images/marshmallow_yellow.png", 64, 64),
-        LoadTextureAndResize("resources/images/marshmallow_brown.png", 64, 64),
-        LoadTextureAndResize("resources/images/marshmallow_black.png", 64, 64)
-    };
-    Texture2D platformTexture = LoadTextureAndResize("resources/images/wooden_platform.png", 600, 32); 
-    Texture2D bonfireTexture = LoadTextureAndResize("resources/images/bonfire.png", 128, 128);
+    background = LoadTextureAndResize("resources/textures/background.png", screenWidth, screenHeight);
+    marshmallowTextures[0] = LoadTextureAndResize("resources/images/marshmallow_white.png", 64, 64);
+    marshmallowTextures[1] = LoadTextureAndResize("resources/images/marshmallow_yellow.png", 64, 64);
+    marshmallowTextures[2] = LoadTextureAndResize("resources/images/marshmallow_brown.png", 64, 64);
+    marshmallowTextures[3] = LoadTextureAndResize("resources/images/marshmallow_black.png", 64, 64);
+
+    platformTexture = LoadTextureAndResize("resources/images/wooden_platform.png", 600, 32); 
+    bonfireTexture = LoadTextureAndResize("resources/images/bonfire.png", 128, 128);
     
     // Load sound/music once and unload at the end
-    Sound clickSound = LoadSound("resources/audio/click-sound.mp3");
-    Sound burnSound = LoadSound("resources/audio/burn-sound.mp3");
-    Music backgroundMusic = LoadMusicStream("resources/audio/ritual.ogg");
+    clickSound = LoadSound("resources/audio/click-sound.mp3");
+    burnSound = LoadSound("resources/audio/burn-sound.mp3");
+    backgroundMusic = LoadMusicStream("resources/audio/ritual.ogg");
     PlayMusicStream(backgroundMusic);
 
     // Initialize parallax layers
     InitializeParallaxLayers();
 
-    // Initialize game state variables
-    GameScreen currentScreen = TITLE;
-    GameMode currentMode = EASY;
-    int score = 0;
-    float deltaTime = 0.0f;
-    float roastingSpeed = 1.0f;
-    int winScore = 50;
-    float timeRemaining = 30.0f;
-    char playerName[32] = "";
-    bool displayLeaderboard = false;
-    int letterCount = 0;
 
     marshmallows[0] = {{150, 200}, 0, 0.0f, marshmallowTextures[0], {150, 200, 64, 64}};
     marshmallows[1] = {{600, 200}, 0, 0.0f, marshmallowTextures[0], {600, 200, 64, 64}};
     marshmallows[2] = {{150, 350}, 0, 0.0f, marshmallowTextures[0], {150, 350, 64, 64}};
     marshmallows[3] = {{600, 350}, 0, 0.0f, marshmallowTextures[0], {600, 350, 64, 64}};
 
-    auto ResetGame = [&]() {
-        score = 0;
-        timeRemaining = 30.0f;  
-        for (int i = 0; i < 4; i++) {
-            ResetMarshmallow(marshmallows[i], marshmallowTextures);
-        }
-    };
 
-    while (!WindowShouldClose()) {
-        deltaTime = GetFrameTime();
-        UpdateMusicStream(backgroundMusic); // Update the music stream properly
+#if defined(PLATFORM_WEB)
+    emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
+#else
+    SetTargetFPS(60);   // Set our game to run at 60 frames-per-second
+    //--------------------------------------------------------------------------------------
 
-        // Update parallax backgrounds
-        for (int i = 0; i < 5; i++) {
-            UpdateParallaxLayer(parallaxLayers[i], deltaTime);
-        }
+    // Main game loop
+    while (!WindowShouldClose())    // Detect window close button or ESC key
+    {
+        UpdateDrawFrame();
+    }
+#endif
+     // Free resources
+    for (int i = 0; i < 4; i++) {
+        UnloadTexture(marshmallowTextures[i]);
+    }
+    UnloadTexture(platformTexture);
+    UnloadTexture(bonfireTexture);
 
-        switch (currentScreen) {
+    // Unload parallax layers
+    for (int i = 0; i < 5; i++) {
+        UnloadTexture(parallaxLayers[i].texture);
+    }
+
+    // Unload sounds and music
+    UnloadSound(clickSound);
+    UnloadSound(burnSound);
+    UnloadMusicStream(backgroundMusic);
+
+    sqlite3_close(db);  // Close database
+    // De-Initialization
+    //--------------------------------------------------------------------------------------
+    CloseWindow();        // Close window and OpenGL context
+    //--------------------------------------------------------------------------------------
+
+    return 0;
+}
+
+//----------------------------------------------------------------------------------
+// Module Functions Definition
+//----------------------------------------------------------------------------------
+void UpdateDrawFrame(void)
+{
+    // Update
+    //----------------------------------------------------------------------------------
+    deltaTime = GetFrameTime();
+    UpdateMusicStream(backgroundMusic); // Update the music stream properly
+
+    // Update parallax backgrounds
+    for (int i = 0; i < 5; i++) {
+        UpdateParallaxLayer(parallaxLayers[i], deltaTime);
+    }
+
+    switch (currentScreen) {
             case LOGO:
                 if (IsKeyPressed(KEY_ENTER)) currentScreen = TITLE;
                 break;
@@ -401,7 +467,11 @@ int main() {
                 break;
         }
 
-        BeginDrawing();
+    //----------------------------------------------------------------------------------
+
+    // Draw
+    //----------------------------------------------------------------------------------
+    BeginDrawing();
         ClearBackground(RAYWHITE);
 
          // Draw the parallax background layers
@@ -474,27 +544,5 @@ int main() {
                 break;
         }
 
-            EndDrawing();
-    }
-
-    // Free resources
-    for (int i = 0; i < 4; i++) {
-        UnloadTexture(marshmallowTextures[i]);
-    }
-    UnloadTexture(platformTexture);
-    UnloadTexture(bonfireTexture);
-
-    // Unload parallax layers
-    for (int i = 0; i < 5; i++) {
-        UnloadTexture(parallaxLayers[i].texture);
-    }
-
-    // Unload sounds and music
-    UnloadSound(clickSound);
-    UnloadSound(burnSound);
-    UnloadMusicStream(backgroundMusic);
-
-    sqlite3_close(db);  // Close database
-    CloseWindow();
-    return 0;
+    EndDrawing();
 }

@@ -26,7 +26,7 @@
 # Define required variables
 PROJECT_NAME       ?= marshmallow_ghost_stack
 RAYLIB_VERSION     ?= 3.8.0
-RAYLIB_PATH        ?= C:/GitHub/raylib
+RAYLIB_PATH        ?= /home/valiantlynx/raylib
 
 # Define default options
 
@@ -373,7 +373,24 @@ ifeq ($(PLATFORM),PLATFORM_DRM)
 endif
 ifeq ($(PLATFORM),PLATFORM_WEB)
     # Libraries for web (HTML5) compiling
-    LDLIBS = $(RAYLIB_RELEASE_PATH)/libraylib.a
+    LDLIBS = $(RAYLIB_RELEASE_PATH)/libraylib.a \
+              /home/valiantlynx/sqlite-autoconf-3460100/libsqlite3.o
+    
+    CFLAGS += -DPLATFORM_WEB \
+                -s ASYNCIFY \
+                -s USE_GLFW=3 \
+                -s TOTAL_MEMORY=1073741824 \
+                -s ALLOW_MEMORY_GROWTH=1 \
+                -s ASSERTIONS=2 \
+                -s STACK_OVERFLOW_CHECK=1 \
+                -s STACK_SIZE=1024KB \
+                -s FORCE_FILESYSTEM \
+                -s 'EXPORTED_FUNCTIONS=["_free", "_malloc", "_main"]' \
+                -s EXPORTED_RUNTIME_METHODS=ccall \
+                --preload-file resources \
+              --shell-file $(RAYLIB_PATH)/src/shell.html \
+              --preload-file /home/valiantlynx/projects/marshmallow-ghost-stack/src/leaderboard.db@/leaderboard.db \
+              -I/home/valiantlynx/sqlite-autoconf-3460100 
 endif
 
 # Define all source files required
