@@ -3,7 +3,7 @@
 <img src="./src/resources/logo.png" alt="Marshmallow Ghost Stack Logo" width="300">
 </center>
 
-[![podcast](./src/resources/logo.png)](./marshmallow-podcast.mp4)
+[![podcast](./src/resources/logo.png)](./marshmallow-podcast.mov)
 
 **Developed for the Beta UIA Game Jam by valiantlynx**
 
