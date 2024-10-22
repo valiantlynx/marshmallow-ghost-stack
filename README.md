@@ -3,7 +3,13 @@
 <img src="./src/resources/logo.png" alt="Marshmallow Ghost Stack Logo" width="300">
 </center>
 
-[![podcast](./src/resources/logo.png)](./marshmallow-podcast.mov)
+<video width="320" height="240" controls>
+  <source src="./marshmallow-podcast.mov" type="video/mov">
+  Your browser does not support the video tag.
+</video>
+
+[![podcast](./src/resources/logo.png)](https://raw.githubusercontent.com/valiantlynx/marshmallow-ghost-stack/main/assets/marshmallow-podcast.mov)
+
 
 **Developed for the Beta UIA Game Jam by valiantlynx**
 
