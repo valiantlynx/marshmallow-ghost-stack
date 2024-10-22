@@ -3,14 +3,6 @@
 <img src="./src/resources/logo.png" alt="Marshmallow Ghost Stack Logo" width="300">
 </center>
 
-<video width="320" height="240" controls>
-  <source src="./marshmallow-podcast.mov" type="video/mov">
-  Your browser does not support the video tag.
-</video>
-
-[![podcast](./src/resources/logo.png)](https://raw.githubusercontent.com/valiantlynx/marshmallow-ghost-stack/main/assets/marshmallow-podcast.mov)
-
-
 **Developed for the Beta UIA Game Jam by valiantlynx**
 
 **Marshmallow Ghost Stack** is a fun web game that challenges you to roast marshmallows to perfection by clicking them at the perfect time, avoiding burning them. The game is inspired by the Ghost Stack game, which is about stacking marshmallows and ice cream sticks as high as possible, adding a playful roasting twist to the theme!
